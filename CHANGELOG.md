@@ -12,8 +12,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   registers `IFSYS` and routes the three sample interfaces through it.
 - `GET /api/topology` — IFSYS-centric nodes/edges (routed interfaces split into
   `source→hub` and `hub→target` hops, direct interfaces as one edge) with category/status filters.
-- Frontend `구성도` page: radial SVG diagram (hub centred, arrow direction, edge width by
-  interface count), node detail panel, double-click to the filtered interface list.
+- Frontend `구성도` page: layered SVG diagram at system granularity — source systems on the
+  left, the EAI box with one node per 연동방식 (integration method) in the centre, target
+  systems on the right; lines coloured by method, direct links dashed. Clicking a system lists
+  its connected systems; double-click opens the filtered interface list.
 - Interface form/list show the 경유시스템; `/interfaces?system=CODE` pre-filters the list.
 - Customer branding: `branding` table + `/api/settings/branding` (company name, tagline, logo
   upload validated by file signature, ≤1 MB, served from `/api/settings/branding/logo`).

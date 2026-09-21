@@ -47,7 +47,7 @@ User asked for an IFSYS-centred 구성도 in Phase 1 (SPEC had topology in Phase
 under `/api/dashboard/topology`). Decision (confirmed with user): IFSYS is a real system row
 (type `EAI`); interfaces get an optional `via_system_id`. Sites without an EAI leave it empty
 and the diagram draws them source→target. Implemented as `GET /api/topology` (hub selectable
-via `?hub=`), pure-SVG radial layout, no D3 dependency. The Phase 2 dashboard can embed the
+via `?hub=`), pure-SVG layered layout (source → EAI/연동방식 → target, systems only, no per-interface lines), no D3 dependency. The Phase 2 dashboard can embed the
 same component; `/api/dashboard/topology` from SPEC is superseded.
 
 ### Q9. Customer logo storage
