@@ -3,17 +3,11 @@ import { useNavigate } from 'react-router-dom';
 
 import { getTopology } from '../api/topology';
 import { Alert } from '../components/common/Alert';
-import { HubDiagram } from '../components/topology/HubDiagram';
-import {
-  HUB_SYSTEM_CODE,
-  INTERFACE_STATUSES,
-  SYSTEM_CATEGORIES,
-  SYSTEM_TYPE_FILL,
-} from '../constants';
+import { LayeredDiagram } from '../components/topology/LayeredDiagram';
+import { buildFlows, methodColor } from '../components/topology/flows';
+import { HUB_SYSTEM_CODE, INTERFACE_STATUSES, SYSTEM_CATEGORIES } from '../constants';
 import { useAsync } from '../hooks/useAsync';
 import type { TopologyNode } from '../types';
-
-const EDGE_PREVIEW = 5;
 
 export function TopologyPage() {
   const navigate = useNavigate();
@@ -21,7 +15,6 @@ export function TopologyPage() {
   const [status, setStatus] = useState('');
   const [selected, setSelected] = useState<TopologyNode | null>(null);
   const [showDirect, setShowDirect] = useState(true);
-  const [expandedEdge, setExpandedEdge] = useState<string | null>(null);
 
   const query = useAsync(
     () =>
@@ -34,35 +27,43 @@ export function TopologyPage() {
   );
   const data = query.data;
 
-  const legendTypes = useMemo(() => {
-    const set = new Set<string>();
-    data?.nodes.forEach((n) => set.add(n.type));
-    return Array.from(set).sort();
-  }, [data]);
+  const flows = useMemo(() => (data ? buildFlows(data) : []), [data]);
+  const methods = useMemo(
+    () =>
+      Array.from(
+        new Set(flows.filter((f) => f.method !== null).map((f) => f.method as string)),
+      ).sort(),
+    [flows],
+  );
+  const hasDirect = flows.some((f) => f.method === null);
 
-  const selectedEdges = useMemo(() => {
-    if (!data || !selected) return [];
-    const byId = new Map(data.nodes.map((n) => [n.id, n]));
-    return data.edges
-      .filter((e) => e.source_id === selected.id || e.target_id === selected.id)
-      .map((e) => ({
-        from: byId.get(e.source_id)?.system_code ?? '?',
-        to: byId.get(e.target_id)?.system_code ?? '?',
-        interfaces: e.interfaces,
-      }));
-  }, [data, selected]);
+  /** Connected systems for the selected node, one row per (partner, method). */
+  const partners = useMemo(() => {
+    if (!selected) return [];
+    return flows
+      .filter((f) => f.source.id === selected.id || f.target.id === selected.id)
+      .map((f) => ({
+        key: `${f.source.id}|${f.method ?? ''}|${f.target.id}`,
+        outbound: f.source.id === selected.id,
+        partner: f.source.id === selected.id ? f.target : f.source,
+        method: f.method,
+        count: f.count,
+      }))
+      .sort((a, b) => a.partner.system_code.localeCompare(b.partner.system_code));
+  }, [flows, selected]);
 
   return (
     <div className="space-y-4">
-      <header className="flex items-center justify-between">
+      <header className="flex items-start justify-between gap-6">
         <div>
           <h1 className="text-xl font-bold">구성도</h1>
           <p className="text-sm text-slate-500">
-            {HUB_SYSTEM_CODE}를 중심으로 시스템 간 인터페이스 흐름을 표시합니다. 노드를 클릭하면
-            상세를 확인하고, 더블클릭하면 해당 시스템의 인터페이스 목록으로 이동합니다.
+            소스 시스템 → {HUB_SYSTEM_CODE}(연동방식) → 타겟 시스템의 연결 관계를 시스템 단위로
+            표시합니다. 시스템을 클릭하면 연결된 시스템을 확인하고, 더블클릭하면 인터페이스 목록으로
+            이동합니다.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           <label className="flex items-center gap-1.5 whitespace-nowrap text-sm text-slate-600">
             <input
               type="checkbox"
@@ -110,28 +111,31 @@ export function TopologyPage() {
             <div className="py-24 text-center text-slate-400">불러오는 중…</div>
           )}
           {data && (
-            <HubDiagram
+            <LayeredDiagram
               topology={data}
               selectedId={selected?.id ?? null}
               showDirect={showDirect}
-              onSelect={(n) => {
-                setSelected(n);
-                setExpandedEdge(null);
-              }}
+              onSelect={setSelected}
               onOpen={(n) => navigate(`/interfaces?system=${encodeURIComponent(n.system_code)}`)}
             />
           )}
           <div className="flex flex-wrap items-center gap-3 px-3 pb-2 text-xs text-slate-600">
-            {legendTypes.map((t) => (
-              <span key={t} className="flex items-center gap-1">
+            {methods.map((m) => (
+              <span key={m} className="flex items-center gap-1">
                 <span
-                  className="inline-block h-3 w-3 rounded-full"
-                  style={{ background: SYSTEM_TYPE_FILL[t] ?? '#94a3b8' }}
+                  className="inline-block h-0.5 w-5"
+                  style={{ background: methodColor(m, methods) }}
                 />
-                {t}
+                {m}
               </span>
             ))}
-            <span className="ml-auto text-slate-400">선 두께 = 인터페이스 수 · 화살표 = 방향</span>
+            {hasDirect && (
+              <span className="flex items-center gap-1">
+                <span className="inline-block w-5 border-t border-dashed border-slate-400" />
+                직접 연동
+              </span>
+            )}
+            <span className="ml-auto text-slate-400">선 색상 = 연동방식</span>
           </div>
         </div>
 
@@ -151,53 +155,24 @@ export function TopologyPage() {
                 </div>
               </div>
               <div className="text-slate-600">
-                연결 인터페이스 <b>{selected.interface_count}</b>건
+                연결 시스템 <b>{new Set(partners.map((p) => p.partner.id)).size}</b>개 · 인터페이스{' '}
+                <b>{selected.interface_count}</b>건
               </div>
-              <ul className="space-y-2">
-                {selectedEdges.map((e) => {
-                  const edgeKey = `${e.from}-${e.to}`;
-                  const expanded = expandedEdge === edgeKey;
-                  const shown = expanded ? e.interfaces : e.interfaces.slice(0, EDGE_PREVIEW);
-                  const hidden = e.interfaces.length - shown.length;
-                  return (
-                    <li key={edgeKey} className="rounded border border-slate-200 p-2">
-                      <div className="mb-1 flex justify-between font-mono text-xs font-semibold">
-                        <span>
-                          {e.from} → {e.to}
-                        </span>
-                        <span className="text-slate-400">{e.interfaces.length}건</span>
-                      </div>
-                      <ul className="space-y-0.5 text-xs">
-                        {shown.map((i) => (
-                          <li key={i.id} className="flex justify-between gap-2">
-                            <span className="truncate">
-                              <span className="font-mono">{i.interface_id}</span> {i.interface_name}
-                            </span>
-                            <span className="shrink-0 text-slate-400">{i.cycle}</span>
-                          </li>
-                        ))}
-                      </ul>
-                      {hidden > 0 && (
-                        <button
-                          type="button"
-                          className="mt-1 text-xs text-brand-600 hover:underline"
-                          onClick={() => setExpandedEdge(edgeKey)}
-                        >
-                          외 {hidden}건 더 보기
-                        </button>
-                      )}
-                      {expanded && e.interfaces.length > EDGE_PREVIEW && (
-                        <button
-                          type="button"
-                          className="mt-1 text-xs text-slate-500 hover:underline"
-                          onClick={() => setExpandedEdge(null)}
-                        >
-                          접기
-                        </button>
-                      )}
-                    </li>
-                  );
-                })}
+              <ul className="divide-y divide-slate-100 rounded border border-slate-200">
+                {partners.map((p) => (
+                  <li key={p.key} className="flex items-center gap-2 px-2 py-1.5 text-xs">
+                    <span
+                      className="inline-block h-0.5 w-4 shrink-0"
+                      style={{ background: methodColor(p.method, methods) }}
+                    />
+                    <span className="text-slate-400">{p.outbound ? '→' : '←'}</span>
+                    <span className="truncate font-medium">{p.partner.system_name}</span>
+                    <span className="font-mono text-slate-400">{p.partner.system_code}</span>
+                    <span className="ml-auto shrink-0 text-slate-500">
+                      {p.method ?? '직접'} · {p.count}건
+                    </span>
+                  </li>
+                ))}
               </ul>
               <button
                 type="button"
