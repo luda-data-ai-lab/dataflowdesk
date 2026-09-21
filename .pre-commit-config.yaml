@@ -1,0 +1,20 @@
+repos:
+  - repo: https://github.com/psf/black
+    rev: 24.8.0
+    hooks:
+      - id: black
+        files: ^backend/
+  - repo: https://github.com/pycqa/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort
+        files: ^backend/
+        args: ["--settings-path", "backend/pyproject.toml"]
+  - repo: local
+    hooks:
+      - id: frontend-lint
+        name: eslint + prettier (frontend)
+        entry: bash -c 'cd frontend && npx eslint "src/**/*.{ts,tsx}" && npx prettier --check "src/**/*.{ts,tsx,css}"'
+        language: system
+        files: ^frontend/src/
+        pass_filenames: false
