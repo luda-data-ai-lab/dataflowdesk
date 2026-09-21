@@ -1,11 +1,6 @@
 import type { Page, UploadHistory, UploadResult } from '../types';
-import { downloadBlob } from '../utils/download';
 import { api } from './client';
-
-async function downloadXlsx(url: string, fallbackName: string): Promise<void> {
-  const res = await api.get<Blob>(url, { responseType: 'blob' });
-  downloadBlob(res.data, res.headers['content-disposition'], fallbackName);
-}
+import { downloadXlsx } from './xlsx';
 
 export function downloadTemplate(): Promise<void> {
   return downloadXlsx('/api/upload/template', 'dataflowdesk_template.xlsx');

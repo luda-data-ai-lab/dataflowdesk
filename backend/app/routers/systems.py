@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import func, or_, select
+from datetime import datetime
+from typing import Any
+
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from sqlalchemy import Select, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.constants import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, PASSWORD_MASK
@@ -11,7 +14,9 @@ from app.database import get_db
 from app.models import Interface, System
 from app.schemas.common import Page
 from app.schemas.system import SystemCreate, SystemOut, SystemUpdate
-from app.services import crypto
+from app.services import crypto, excel_parser
+from app.services.excel_parser import SYSTEM_SHEET
+from app.services.xlsx import xlsx_response
 
 router = APIRouter(prefix="/api/systems", tags=["systems"])
 
@@ -76,17 +81,36 @@ async def _ensure_unique_code(db: AsyncSession, code: str, exclude_id: int | Non
         raise HTTPException(status.HTTP_409_CONFLICT, detail=f"system_code '{code}' already exists")
 
 
-@router.get("", response_model=Page[SystemOut])
-async def list_systems(
-    category: str | None = None,
-    type: str | None = None,
-    keyword: str | None = None,
-    page: int = Query(1, ge=1),
-    size: int = Query(DEFAULT_PAGE_SIZE, ge=1, le=MAX_PAGE_SIZE),
-    sort: str = Query("id", pattern="^-?(id|category|type|system_name|system_code|updated_at)$"),
-    db: AsyncSession = Depends(get_db),
-) -> Page[SystemOut]:
-    """List systems with optional category / type / keyword filters. Passwords are masked."""
+SORTABLE = {
+    "id": System.id,
+    "category": System.category,
+    "type": System.type,
+    "system_name": System.system_name,
+    "system_code": System.system_code,
+    "updated_at": System.updated_at,
+}
+SORT_PATTERN = "^-?(id|category|type|system_name|system_code|updated_at)$"
+
+SYSTEM_LIST_COLUMNS: tuple[str, ...] = (
+    "번호",
+    "구분",
+    "타입",
+    "시스템명",
+    "시스템코드",
+    "IP",
+    "PORT",
+    "계정",
+    "제품명",
+    "설명",
+    "인터페이스 수",
+    "수정일",
+)
+
+
+def _filtered(
+    category: str | None, type: str | None, keyword: str | None, sort: str
+) -> Select[tuple[System]]:
+    """Build the filtered + sorted system query shared by list and export."""
     stmt = select(System)
     if category:
         stmt = stmt.where(System.category == category)
@@ -103,9 +127,25 @@ async def list_systems(
                 System.product_name.ilike(like),
             )
         )
-    total = (await db.execute(select(func.count()).select_from(stmt.subquery()))).scalar_one()
-    order_col = getattr(System, sort.lstrip("-"))
-    stmt = stmt.order_by(order_col.desc() if sort.startswith("-") else order_col.asc())
+    order_col = SORTABLE[sort.lstrip("-")]
+    return stmt.order_by(order_col.desc() if sort.startswith("-") else order_col.asc())
+
+
+@router.get("", response_model=Page[SystemOut])
+async def list_systems(
+    category: str | None = None,
+    type: str | None = None,
+    keyword: str | None = None,
+    page: int = Query(1, ge=1),
+    size: int = Query(DEFAULT_PAGE_SIZE, ge=1, le=MAX_PAGE_SIZE),
+    sort: str = Query("id", pattern=SORT_PATTERN),
+    db: AsyncSession = Depends(get_db),
+) -> Page[SystemOut]:
+    """List systems with optional category / type / keyword filters. Passwords are masked."""
+    stmt = _filtered(category, type, keyword, sort)
+    total = (
+        await db.execute(select(func.count()).select_from(stmt.order_by(None).subquery()))
+    ).scalar_one()
     stmt = stmt.offset((page - 1) * size).limit(size)
     systems = list((await db.execute(stmt)).scalars().all())
     counts = await _interface_counts(db, [s.id for s in systems])
@@ -114,6 +154,41 @@ async def list_systems(
         total=total,
         page=page,
         size=size,
+    )
+
+
+@router.get("/export")
+async def export_systems(
+    category: str | None = None,
+    type: str | None = None,
+    keyword: str | None = None,
+    sort: str = Query("id", pattern=SORT_PATTERN),
+    db: AsyncSession = Depends(get_db),
+) -> Response:
+    """Download the filtered system list as xlsx. Passwords are never included."""
+    systems = list((await db.execute(_filtered(category, type, keyword, sort))).scalars().all())
+    counts = await _interface_counts(db, [s.id for s in systems])
+    rows: list[list[Any]] = [
+        [
+            idx,
+            s.category,
+            s.type,
+            s.system_name,
+            s.system_code,
+            s.ip,
+            s.port,
+            s.account,
+            s.product_name,
+            s.description,
+            counts.get(s.id, 0),
+            s.updated_at.strftime("%Y-%m-%d %H:%M") if s.updated_at else None,
+        ]
+        for idx, s in enumerate(systems, start=1)
+    ]
+    stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    return xlsx_response(
+        excel_parser.build_sheet(SYSTEM_SHEET, list(SYSTEM_LIST_COLUMNS), rows),
+        f"dataflowdesk_systems_{stamp}.xlsx",
     )
 
 

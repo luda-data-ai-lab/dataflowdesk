@@ -1,5 +1,6 @@
 import type { Interface, InterfaceInput, Page } from '../types';
 import { api } from './client';
+import { downloadXlsx } from './xlsx';
 
 export interface InterfaceQuery {
   integration_type?: string;
@@ -18,6 +19,13 @@ export interface InterfaceQuery {
 export async function listInterfaces(params: InterfaceQuery): Promise<Page<Interface>> {
   const { data } = await api.get<Page<Interface>>('/api/interfaces', { params });
   return data;
+}
+
+export type InterfaceExportQuery = Omit<InterfaceQuery, 'page' | 'size'>;
+
+/** Download the interface list matching `params` as xlsx (all pages). */
+export function exportInterfaces(params: InterfaceExportQuery): Promise<void> {
+  return downloadXlsx('/api/interfaces/export', 'dataflowdesk_interfaces.xlsx', { ...params });
 }
 
 export async function createInterface(body: InterfaceInput): Promise<Interface> {

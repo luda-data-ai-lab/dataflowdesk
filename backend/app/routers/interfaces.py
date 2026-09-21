@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import func, or_, select
+from datetime import datetime
+from typing import Any
+
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from sqlalchemy import Select, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
@@ -12,8 +15,27 @@ from app.database import get_db
 from app.models import Interface, System
 from app.schemas.common import Page
 from app.schemas.interface import InterfaceCreate, InterfaceOut, InterfaceUpdate
+from app.services import excel_parser
+from app.services.excel_parser import INTERFACE_SHEET
+from app.services.xlsx import xlsx_response
 
 router = APIRouter(prefix="/api/interfaces", tags=["interfaces"])
+
+INTERFACE_LIST_COLUMNS: tuple[str, ...] = (
+    "인터페이스 ID",
+    "인터페이스 이름",
+    "연동방식",
+    "Process",
+    "소스시스템",
+    "소스시스템명",
+    "타켓시스템",
+    "타켓시스템명",
+    "경유시스템",
+    "연동주기",
+    "상태",
+    "설명",
+    "수정일",
+)
 
 SORTABLE = {
     "id": Interface.id,
@@ -67,22 +89,18 @@ async def _ensure_unique_interface_id(
         )
 
 
-@router.get("", response_model=Page[InterfaceOut])
-async def list_interfaces(
-    integration_type: str | None = None,
-    source: str | None = Query(None, description="source system_code"),
-    target: str | None = Query(None, description="target system_code"),
-    system: str | None = Query(None, description="system_code as source OR target OR via"),
-    via: str | None = Query(None, description="via (hub) system_code"),
-    cycle: str | None = None,
-    status_: str | None = Query(None, alias="status"),
-    keyword: str | None = None,
-    page: int = Query(1, ge=1),
-    size: int = Query(DEFAULT_PAGE_SIZE, ge=1, le=MAX_PAGE_SIZE),
-    sort: str = Query("interface_id"),
-    db: AsyncSession = Depends(get_db),
-) -> Page[InterfaceOut]:
-    """List interfaces with filters, keyword search (name/description/process) and paging."""
+def _filtered(
+    integration_type: str | None,
+    source: str | None,
+    target: str | None,
+    system: str | None,
+    via: str | None,
+    cycle: str | None,
+    status_: str | None,
+    keyword: str | None,
+    sort: str,
+) -> Select[tuple[Interface]]:
+    """Build the filtered + sorted interface query shared by list and export."""
     src = aliased(System)
     tgt = aliased(System)
     hub = aliased(System)
@@ -118,16 +136,78 @@ async def list_interfaces(
                 Interface.process.ilike(like),
             )
         )
-    total = (await db.execute(select(func.count()).select_from(stmt.subquery()))).scalar_one()
     key = sort.lstrip("-")
     if key not in SORTABLE:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=f"Cannot sort by '{key}'")
     col = SORTABLE[key]
-    stmt = stmt.order_by(col.desc() if sort.startswith("-") else col.asc(), Interface.id)
+    return stmt.order_by(col.desc() if sort.startswith("-") else col.asc(), Interface.id)
+
+
+@router.get("", response_model=Page[InterfaceOut])
+async def list_interfaces(
+    integration_type: str | None = None,
+    source: str | None = Query(None, description="source system_code"),
+    target: str | None = Query(None, description="target system_code"),
+    system: str | None = Query(None, description="system_code as source OR target OR via"),
+    via: str | None = Query(None, description="via (hub) system_code"),
+    cycle: str | None = None,
+    status_: str | None = Query(None, alias="status"),
+    keyword: str | None = None,
+    page: int = Query(1, ge=1),
+    size: int = Query(DEFAULT_PAGE_SIZE, ge=1, le=MAX_PAGE_SIZE),
+    sort: str = Query("interface_id"),
+    db: AsyncSession = Depends(get_db),
+) -> Page[InterfaceOut]:
+    """List interfaces with filters, keyword search (name/description/process) and paging."""
+    stmt = _filtered(integration_type, source, target, system, via, cycle, status_, keyword, sort)
+    total = (
+        await db.execute(select(func.count()).select_from(stmt.order_by(None).subquery()))
+    ).scalar_one()
     stmt = stmt.offset((page - 1) * size).limit(size)
     items = (await db.execute(stmt)).unique().scalars().all()
     return Page(
         items=[InterfaceOut.model_validate(i) for i in items], total=total, page=page, size=size
+    )
+
+
+@router.get("/export")
+async def export_interfaces(
+    integration_type: str | None = None,
+    source: str | None = None,
+    target: str | None = None,
+    system: str | None = None,
+    via: str | None = None,
+    cycle: str | None = None,
+    status_: str | None = Query(None, alias="status"),
+    keyword: str | None = None,
+    sort: str = Query("interface_id"),
+    db: AsyncSession = Depends(get_db),
+) -> Response:
+    """Download the filtered interface list as xlsx (template columns + 상태/시스템명)."""
+    stmt = _filtered(integration_type, source, target, system, via, cycle, status_, keyword, sort)
+    items = (await db.execute(stmt)).unique().scalars().all()
+    rows: list[list[Any]] = [
+        [
+            i.interface_id,
+            i.interface_name,
+            i.integration_type,
+            i.process,
+            i.source_system.system_code if i.source_system else None,
+            i.source_system.system_name if i.source_system else None,
+            i.target_system.system_code if i.target_system else None,
+            i.target_system.system_name if i.target_system else None,
+            i.via_system.system_code if i.via_system else None,
+            i.cycle,
+            i.status,
+            i.description,
+            i.updated_at.strftime("%Y-%m-%d %H:%M") if i.updated_at else None,
+        ]
+        for i in items
+    ]
+    stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    return xlsx_response(
+        excel_parser.build_sheet(INTERFACE_SHEET, list(INTERFACE_LIST_COLUMNS), rows),
+        f"dataflowdesk_interfaces_{stamp}.xlsx",
     )
 
 

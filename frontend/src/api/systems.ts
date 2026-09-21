@@ -1,5 +1,6 @@
 import type { Page, System, SystemInput } from '../types';
 import { api } from './client';
+import { downloadXlsx } from './xlsx';
 
 export interface SystemQuery {
   category?: string;
@@ -13,6 +14,13 @@ export interface SystemQuery {
 export async function listSystems(params: SystemQuery): Promise<Page<System>> {
   const { data } = await api.get<Page<System>>('/api/systems', { params });
   return data;
+}
+
+export type SystemExportQuery = Omit<SystemQuery, 'page' | 'size'>;
+
+/** Download the system list matching `params` as xlsx (all pages, passwords excluded). */
+export function exportSystems(params: SystemExportQuery): Promise<void> {
+  return downloadXlsx('/api/systems/export', 'dataflowdesk_systems.xlsx', { ...params });
 }
 
 export async function getSystem(id: number, includePassword = false): Promise<System> {
