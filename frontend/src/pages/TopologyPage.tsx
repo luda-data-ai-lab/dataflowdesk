@@ -132,13 +132,15 @@ export function TopologyPage() {
             <div className="py-24 text-center text-slate-400">불러오는 중…</div>
           )}
           {data && (
-            <LayeredDiagram
-              topology={data}
-              selectedId={selected?.id ?? null}
-              showDirect={showDirect}
-              onSelect={setSelected}
-              onOpen={(n) => navigate(`/interfaces?system=${encodeURIComponent(n.system_code)}`)}
-            />
+            <div className="max-h-[78vh] overflow-auto">
+              <LayeredDiagram
+                topology={data}
+                selectedId={selected?.id ?? null}
+                showDirect={showDirect}
+                onSelect={setSelected}
+                onOpen={(n) => navigate(`/interfaces?system=${encodeURIComponent(n.system_code)}`)}
+              />
+            </div>
           )}
           <div className="flex flex-wrap items-center gap-3 px-3 pb-2 text-xs text-slate-600">
             {methods.map((m) => (

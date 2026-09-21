@@ -170,7 +170,10 @@ export function LayeredDiagram({
   return (
     <svg
       viewBox={`0 0 ${WIDTH} ${height}`}
-      className="h-auto w-full select-none"
+      width={WIDTH}
+      height={height}
+      className="mx-auto block max-w-full select-none"
+      style={{ height: 'auto' }}
       role="img"
       aria-label={`${topology.hub_code} 연동 구성도`}
     >
