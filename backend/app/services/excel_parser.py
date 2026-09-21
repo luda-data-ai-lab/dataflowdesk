@@ -15,6 +15,7 @@ from app.constants import (
     INTERFACE_COLUMNS,
     INTERFACE_REQUIRED,
     INTERFACE_SHEET,
+    OPTIONAL_COLUMNS,
     SYSTEM_COLUMNS,
     SYSTEM_REQUIRED,
     SYSTEM_SHEET,
@@ -32,6 +33,7 @@ SAMPLE_INTERFACES: list[list[Any]] = [
         "SAP-EAI-CRM(DB)-SAP",
         "SAP",
         "CRM",
+        None,
         "Real Time",
         "SAP에서 고객정보가 발생하면 CRM으로 전송한다",
     ],
@@ -42,6 +44,7 @@ SAMPLE_INTERFACES: list[list[Any]] = [
         "CRM(DB)-EAI-SAP-CRM",
         "CRM",
         "SAP",
+        None,
         "Batch",
         "CRM에서 클레임 정보가 발생하면 SAP로 변경 데이터를 전송한다.",
     ],
@@ -52,6 +55,7 @@ SAMPLE_INTERFACES: list[list[Any]] = [
         "WEB(JSON)-EAI-SAP-WEB",
         "HR",
         "SAP",
+        None,
         "Real Time",
         "HR시스템에서 고객 정보 필요시 web service를 통해서 SAP를 조회 후 수신한다.",
     ],
@@ -188,10 +192,10 @@ def _read_sheet(
     if header_row is None:
         raise ExcelFormatError(f"Sheet '{sheet_name}' is empty")
     headers = [_cell_str(h) for h in header_row]
-    missing = [h for h in columns if h not in headers]
+    missing = [h for h in columns if h not in headers and h not in OPTIONAL_COLUMNS]
     if missing:
         raise ExcelFormatError(f"Missing columns in '{sheet_name}': {', '.join(missing)}")
-    index = {h: headers.index(h) for h in columns}
+    index = {h: headers.index(h) for h in columns if h in headers}
 
     parsed = ParsedSheet()
     for row_no, values in enumerate(rows_iter, start=2):
@@ -200,8 +204,8 @@ def _read_sheet(
         record: dict[str, Any] = {}
         row_ok = True
         for header, db_field in columns.items():
-            pos = index[header]
-            raw = values[pos] if pos < len(values) else None
+            pos = index.get(header)
+            raw = values[pos] if pos is not None and pos < len(values) else None
             text = _cell_str(raw)
             if header in required and text is None:
                 parsed.errors.append(RowError(row_no, header, "required value is empty"))

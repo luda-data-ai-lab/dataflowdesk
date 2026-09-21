@@ -1,7 +1,8 @@
-# I/F Manager
+# DataFlowDesk
 
 Web application for managing system-to-system interfaces (MES/ERP integration landscape).
-Replaces Excel-based tracking with a database, searchable UI and dashboard.
+Replaces Excel-based tracking with a database, searchable UI, an IFSYS-centred topology
+diagram and a dashboard.
 See [SPEC.md](SPEC.md) for the product specification and [DEVIN.md](DEVIN.md) for the
 development plan.
 
@@ -36,6 +37,21 @@ API docs: http://localhost:8000/docs
 
 Edit `DB_TYPE` in `.env` (`sqlite` | `postgresql` | `mssql`) and fill in the `DB_*` values,
 or set `DATABASE_URL` directly. Then run `alembic upgrade head` again.
+
+## IFSYS (EAI hub) and the topology view
+
+Interfaces may optionally route through an intermediate system (`via_system_id`, Excel column
+`경유시스템`). The seed registers `IFSYS` (type `EAI`) as that hub. `구성도` (`/topology`,
+`GET /api/topology`) draws IFSYS in the centre; routed interfaces render as `source → IFSYS →
+target`, direct interfaces (no via system) as `source → target`. Sites without an EAI simply
+leave `경유시스템` empty.
+
+## Customer branding
+
+`설정` (`/settings`) lets each customer upload a company logo (PNG/JPEG/GIF/WebP/SVG, ≤1 MB)
+and set a company name / tagline. The logo is stored in the database (`branding` table) and
+shown at the top of the sidebar; no rebuild or restart is needed. API:
+`GET/PUT /api/settings/branding`, `POST/DELETE /api/settings/branding/logo`.
 
 ## Development
 

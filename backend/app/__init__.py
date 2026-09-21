@@ -1,1 +1,1 @@
-"""I/F Manager backend package."""
+"""DataFlowDesk backend package."""

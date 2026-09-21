@@ -53,6 +53,8 @@ export interface Interface {
   target_system_id: number;
   source_system: SystemRef | null;
   target_system: SystemRef | null;
+  via_system_id: number | null;
+  via_system: SystemRef | null;
   cycle: string;
   description: string | null;
   status: string;
@@ -67,9 +69,43 @@ export interface InterfaceInput {
   process: string | null;
   source_system_id: number;
   target_system_id: number;
+  via_system_id: number | null;
   cycle: string;
   description: string | null;
   status: string;
+}
+
+export interface TopologyNode {
+  id: number;
+  system_code: string;
+  system_name: string;
+  type: string;
+  category: string;
+  product_name: string | null;
+  is_hub: boolean;
+  interface_count: number;
+}
+
+export interface TopologyInterface {
+  id: number;
+  interface_id: string;
+  interface_name: string;
+  integration_type: string;
+  cycle: string;
+  status: string;
+}
+
+export interface TopologyEdge {
+  source_id: number;
+  target_id: number;
+  interfaces: TopologyInterface[];
+}
+
+export interface Topology {
+  hub_id: number | null;
+  hub_code: string;
+  nodes: TopologyNode[];
+  edges: TopologyEdge[];
 }
 
 export interface RowError {
@@ -99,4 +135,18 @@ export interface UploadHistory {
 
 export interface ApiError {
   detail: string;
+}
+
+export interface Branding {
+  company_name: string | null;
+  tagline: string | null;
+  logo_url: string | null;
+  logo_mime: string | null;
+  logo_size: number | null;
+  updated_at: string;
+}
+
+export interface BrandingInput {
+  company_name: string | null;
+  tagline: string | null;
 }

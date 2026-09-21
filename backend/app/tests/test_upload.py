@@ -67,11 +67,11 @@ async def test_upload_interfaces_validation(client: AsyncClient) -> None:
 
     rows = [
         SAMPLE_INTERFACES[0],  # duplicate
-        ["004_X_Y", "x", "SAP-DB", None, "NOPE", "CRM", "Batch", None],  # unknown source
-        ["005_X_Y", "x", "SAP-DB", None, "SAP", "NOPE", "Batch", None],  # unknown target
-        ["006_X_Y", None, "SAP-DB", None, "SAP", "CRM", "Batch", None],  # missing name
-        ["007_OK", "ok", "SAP-DB", None, "SAP", "CRM", "Batch", None],  # valid
-        [None] * 8,  # blank row ignored
+        ["004_X_Y", "x", "SAP-DB", None, "NOPE", "CRM", None, "Batch", None],  # unknown source
+        ["005_X_Y", "x", "SAP-DB", None, "SAP", "NOPE", None, "Batch", None],  # unknown target
+        ["006_X_Y", None, "SAP-DB", None, "SAP", "CRM", None, "Batch", None],  # missing name
+        ["007_OK", "ok", "SAP-DB", None, "SAP", "CRM", None, "Batch", None],  # valid
+        [None] * 9,  # blank row ignored
     ]
     resp = await client.post(
         "/api/upload/interfaces", files=_upload_files(build_workbook(rows, None))

@@ -41,3 +41,17 @@ dialect automatically; `server_default=func.now()` renders as `GETDATE()`. Needs
 
 ### Q7. Upload history `user_id`
 Auth is Phase 3, so `user_id` is `NULL` for Phase 1 uploads.
+
+### Q8. IFSYS topology — placement and data model
+User asked for an IFSYS-centred 구성도 in Phase 1 (SPEC had topology in Phase 2 as a force graph
+under `/api/dashboard/topology`). Decision (confirmed with user): IFSYS is a real system row
+(type `EAI`); interfaces get an optional `via_system_id`. Sites without an EAI leave it empty
+and the diagram draws them source→target. Implemented as `GET /api/topology` (hub selectable
+via `?hub=`), pure-SVG radial layout, no D3 dependency. The Phase 2 dashboard can embed the
+same component; `/api/dashboard/topology` from SPEC is superseded.
+
+### Q9. Customer logo storage
+Requirement: customers must be able to add their logo easily. Decision: single-row `branding`
+table with the logo bytes stored in the DB (works for SQLite/PostgreSQL/MSSQL, no shared volume
+needed), ≤1 MB, type detected from file signature. One branding per deployment (one customer per
+installation); multi-tenant branding is out of scope until a tenant model exists.

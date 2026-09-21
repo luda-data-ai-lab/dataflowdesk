@@ -34,19 +34,20 @@ async def _get_or_404(db: AsyncSession, interface_pk: int) -> Interface:
     return interface
 
 
-async def _validate_systems(db: AsyncSession, source_id: int, target_id: int) -> None:
-    """Raise 400 if source or target system does not exist."""
+async def _validate_systems(
+    db: AsyncSession, source_id: int, target_id: int, via_id: int | None = None
+) -> None:
+    """Raise 400 if source, target or via system does not exist."""
+    wanted = {"source_system_id": source_id, "target_system_id": target_id}
+    if via_id is not None:
+        wanted["via_system_id"] = via_id
     rows = (
-        (await db.execute(select(System.id).where(System.id.in_([source_id, target_id]))))
+        (await db.execute(select(System.id).where(System.id.in_(list(wanted.values())))))
         .scalars()
         .all()
     )
     found = set(rows)
-    missing = [
-        name
-        for name, sid in (("source_system_id", source_id), ("target_system_id", target_id))
-        if sid not in found
-    ]
+    missing = [name for name, sid in wanted.items() if sid not in found]
     if missing:
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST, detail=f"Unknown system for {', '.join(missing)}"
@@ -71,7 +72,8 @@ async def list_interfaces(
     integration_type: str | None = None,
     source: str | None = Query(None, description="source system_code"),
     target: str | None = Query(None, description="target system_code"),
-    system: str | None = Query(None, description="system_code as source OR target"),
+    system: str | None = Query(None, description="system_code as source OR target OR via"),
+    via: str | None = Query(None, description="via (hub) system_code"),
     cycle: str | None = None,
     status_: str | None = Query(None, alias="status"),
     keyword: str | None = None,
@@ -83,10 +85,12 @@ async def list_interfaces(
     """List interfaces with filters, keyword search (name/description/process) and paging."""
     src = aliased(System)
     tgt = aliased(System)
+    hub = aliased(System)
     stmt = (
         select(Interface)
         .outerjoin(src, Interface.source_system_id == src.id)
         .outerjoin(tgt, Interface.target_system_id == tgt.id)
+        .outerjoin(hub, Interface.via_system_id == hub.id)
     )
     if integration_type:
         stmt = stmt.where(Interface.integration_type == integration_type)
@@ -94,8 +98,12 @@ async def list_interfaces(
         stmt = stmt.where(src.system_code == source)
     if target:
         stmt = stmt.where(tgt.system_code == target)
+    if via:
+        stmt = stmt.where(hub.system_code == via)
     if system:
-        stmt = stmt.where(or_(src.system_code == system, tgt.system_code == system))
+        stmt = stmt.where(
+            or_(src.system_code == system, tgt.system_code == system, hub.system_code == system)
+        )
     if cycle:
         stmt = stmt.where(Interface.cycle == cycle)
     if status_:
@@ -135,7 +143,9 @@ async def create_interface(
 ) -> InterfaceOut:
     """Create an interface after validating uniqueness and system FKs."""
     await _ensure_unique_interface_id(db, payload.interface_id)
-    await _validate_systems(db, payload.source_system_id, payload.target_system_id)
+    await _validate_systems(
+        db, payload.source_system_id, payload.target_system_id, payload.via_system_id
+    )
     interface = Interface(**payload.model_dump())
     db.add(interface)
     await db.commit()
@@ -150,7 +160,9 @@ async def update_interface(
     """Full update of an interface."""
     interface = await _get_or_404(db, interface_pk)
     await _ensure_unique_interface_id(db, payload.interface_id, exclude_pk=interface_pk)
-    await _validate_systems(db, payload.source_system_id, payload.target_system_id)
+    await _validate_systems(
+        db, payload.source_system_id, payload.target_system_id, payload.via_system_id
+    )
     for key, value in payload.model_dump().items():
         setattr(interface, key, value)
     await db.commit()
