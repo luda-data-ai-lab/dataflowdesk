@@ -24,5 +24,7 @@ export function ChartCard({ title, subtitle, action, children, className = '' }:
 }
 
 export function EmptyChart({ message = '표시할 데이터가 없습니다.' }: { message?: string }) {
-  return <div className="flex h-full items-center justify-center text-sm text-slate-400">{message}</div>;
+  return (
+    <div className="flex h-full items-center justify-center text-sm text-slate-400">{message}</div>
+  );
 }

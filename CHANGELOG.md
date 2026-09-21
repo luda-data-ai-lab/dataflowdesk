@@ -5,6 +5,25 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added — Phase 3 (Audit log, authentication, user management)
+- Automatic `change_log` writes for systems and interfaces via SQLAlchemy `after_flush`
+  listeners: CREATE / DELETE store a JSON snapshot of the row, UPDATE stores one row per changed
+  field (`old_value` / `new_value`), each tagged with the acting user; `password_encrypted` is
+  masked as `***`. Written inside the same transaction as the change.
+- `GET /api/changelog` (filters: `table`, `action`, `user_id`, `record_id`, `date_from`,
+  `date_to`; newest first, paginated) and `GET /api/changelog/export` (xlsx of the filtered log).
+- JWT auth: `POST /api/auth/login`, `POST /api/auth/refresh`, `GET /api/auth/me`; all other API
+  routes now require a bearer token except `/api/health` and `GET /api/settings/branding`.
+- Admin-only user management: `GET/POST /api/users`, `PUT /api/users/{id}` (display name, role,
+  password reset), `PATCH /api/users/{id}/deactivate` and `/activate`. Self-demotion and
+  self-deactivation are rejected. `seed.py` creates the initial admin (`ADMIN_USERNAME` /
+  `ADMIN_PASSWORD`, default `admin` / `admin1234`).
+- Frontend: 로그인 page, token storage + Axios interceptor (silent refresh, redirect to `/login`
+  on 401), route guard, sidebar user info + 로그아웃, `변경 이력` page (filters, snapshot
+  expander, Excel 다운로드) and admin-only `사용자 관리` page (create / edit / role / password /
+  activate-deactivate). Dashboard "최근 7일 변경" card now shows real audit counts and links to
+  변경 이력.
+
 ### Added — Excel list downloads
 - `GET /api/interfaces/export` and `GET /api/systems/export`: single-sheet xlsx of the current
   list (same filters/sort as the list endpoints, all pages). System export never includes

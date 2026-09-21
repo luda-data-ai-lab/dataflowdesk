@@ -38,6 +38,9 @@ class Settings(BaseSettings):
     jwt_secret: str = "change-me"
     jwt_access_token_minutes: int = 30
     jwt_refresh_token_days: int = 7
+    # initial admin account created by `python seed.py` (change the password after first login)
+    admin_username: str = "admin"
+    admin_password: str = "admin1234"
 
     backend_port: int = 8000
     cors_origins: str = "http://localhost:5173"
