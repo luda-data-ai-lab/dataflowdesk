@@ -13,7 +13,7 @@ export function TopologyPage() {
   const navigate = useNavigate();
   const [category, setCategory] = useState('');
   const [status, setStatus] = useState('');
-  const [selected, setSelected] = useState<TopologyNode | null>(null);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
   const [showDirect, setShowDirect] = useState(true);
 
   const query = useAsync(
@@ -26,6 +26,12 @@ export function TopologyPage() {
     [category, status],
   );
   const data = query.data;
+  /** Resolve the selection against the latest topology so counts stay current after a reload. */
+  const selected = useMemo(
+    () => data?.nodes.find((n) => n.id === selectedId) ?? null,
+    [data, selectedId],
+  );
+  const setSelected = (n: TopologyNode | null) => setSelectedId(n?.id ?? null);
 
   const flows = useMemo(() => (data ? buildFlows(data) : []), [data]);
   const methods = useMemo(
@@ -165,7 +171,7 @@ export function TopologyPage() {
           )}
           {unconnected.length > 0 && (
             <div className="mx-3 mb-2 flex flex-wrap items-center gap-1.5 border-t border-slate-100 pt-2 text-xs text-slate-500">
-              <span className="mr-1">인터페이스 미등록 시스템 ({unconnected.length})</span>
+              <span className="mr-1">연결이 표시되지 않는 시스템 ({unconnected.length})</span>
               {unconnected.map((n) => (
                 <button
                   key={n.id}
