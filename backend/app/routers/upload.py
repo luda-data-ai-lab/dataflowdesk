@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from datetime import datetime
 from typing import Any
-from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from fastapi.responses import Response
@@ -23,19 +22,9 @@ from app.models import Interface, System, UploadHistory
 from app.schemas.common import Page
 from app.schemas.upload import RowError, UploadHistoryOut, UploadResult
 from app.services import crypto, excel_parser
+from app.services.xlsx import xlsx_response
 
 router = APIRouter(prefix="/api/upload", tags=["upload"])
-
-XLSX_MEDIA = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-
-
-def _xlsx_response(content: bytes, filename: str) -> Response:
-    """Return xlsx bytes as a download."""
-    return Response(
-        content=content,
-        media_type=XLSX_MEDIA,
-        headers={"Content-Disposition": f"attachment; filename*=UTF-8''{quote(filename)}"},
-    )
 
 
 async def _read_upload(file: UploadFile) -> bytes:
@@ -67,7 +56,7 @@ async def _record_history(
 @router.get("/template")
 async def download_template() -> Response:
     """Download the two-sheet template with sample rows."""
-    return _xlsx_response(excel_parser.build_template(), "if_manager_template.xlsx")
+    return xlsx_response(excel_parser.build_template(), "if_manager_template.xlsx")
 
 
 @router.post("/interfaces", response_model=UploadResult)
@@ -247,7 +236,7 @@ async def export_all(
         for idx, s in enumerate(systems, start=1)
     ]
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    return _xlsx_response(
+    return xlsx_response(
         excel_parser.build_workbook(if_rows, sys_rows), f"if_manager_export_{stamp}.xlsx"
     )
 

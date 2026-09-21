@@ -1,7 +1,7 @@
 import { useState } from 'react';
 
 import { errorMessage } from '../api/client';
-import { deleteSystem, getSystem, listSystems } from '../api/systems';
+import { deleteSystem, exportSystems, getSystem, listSystems } from '../api/systems';
 import { Alert } from '../components/common/Alert';
 import { Badge } from '../components/common/Badge';
 import { ConfirmDialog } from '../components/common/ConfirmDialog';
@@ -25,6 +25,7 @@ export function SystemManagePage() {
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [revealed, setRevealed] = useState<Record<number, string>>({});
   const [notice, setNotice] = useState<string | null>(null);
+  const [downloading, setDownloading] = useState(false);
 
   const query = useAsync(
     () =>
@@ -36,6 +37,20 @@ export function SystemManagePage() {
       }),
     [tab, keyword, page],
   );
+
+  const download = async () => {
+    setDownloading(true);
+    try {
+      await exportSystems({
+        category: tab === '전체' ? undefined : tab,
+        keyword: keyword || undefined,
+      });
+    } catch (err) {
+      setNotice(errorMessage(err));
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   const openCreate = () => {
     setEditing(null);
@@ -88,9 +103,20 @@ export function SystemManagePage() {
           <h1 className="text-xl font-bold">시스템 관리</h1>
           <p className="text-sm text-slate-500">연동 대상 시스템의 접속 정보를 관리합니다.</p>
         </div>
-        <button type="button" className="btn-primary" onClick={openCreate}>
-          + 시스템 추가
-        </button>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={download}
+            disabled={downloading}
+            title="현재 구분·검색 조건의 목록을 Excel로 다운로드 (비밀번호 제외)"
+          >
+            {downloading ? '다운로드 중…' : 'Excel 다운로드'}
+          </button>
+          <button type="button" className="btn-primary" onClick={openCreate}>
+            + 시스템 추가
+          </button>
+        </div>
       </header>
 
       {notice && <Alert kind="info" message={notice} onClose={() => setNotice(null)} />}

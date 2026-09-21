@@ -158,6 +158,19 @@ def build_workbook(interfaces: list[list[Any]] | None, systems: list[list[Any]] 
     return buf.getvalue()
 
 
+def build_sheet(title: str, headers: list[str], rows: list[list[Any]]) -> bytes:
+    """Create a single-sheet workbook (list downloads) and return the xlsx bytes."""
+    wb = Workbook()
+    ws = wb.active
+    ws.title = title
+    _write_header(ws, headers)
+    for row in rows:
+        ws.append(row)
+    buf = io.BytesIO()
+    wb.save(buf)
+    return buf.getvalue()
+
+
 def build_template() -> bytes:
     """Template workbook: headers plus sample rows 2-4."""
     return build_workbook(SAMPLE_INTERFACES, SAMPLE_SYSTEMS)

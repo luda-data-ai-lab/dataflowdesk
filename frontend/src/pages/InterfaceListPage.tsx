@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
 import { errorMessage } from '../api/client';
-import { deleteInterface, listInterfaces } from '../api/interfaces';
+import { deleteInterface, exportInterfaces, listInterfaces } from '../api/interfaces';
 import { listSystems } from '../api/systems';
 import { downloadTemplate, exportAll } from '../api/upload';
 import { Alert } from '../components/common/Alert';
@@ -50,7 +50,7 @@ export function InterfaceListPage() {
   const [notice, setNotice] = useState<{ kind: 'info' | 'error' | 'success'; text: string } | null>(
     null,
   );
-  const [downloading, setDownloading] = useState<'template' | 'export' | null>(null);
+  const [downloading, setDownloading] = useState<'template' | 'export' | 'list' | null>(null);
 
   const systemsQuery = useAsync(() => listSystems({ size: 200, sort: 'system_name' }), []);
   const systems = useMemo(() => systemsQuery.data?.items ?? [], [systemsQuery.data]);
@@ -102,11 +102,19 @@ export function InterfaceListPage() {
     }
   };
 
-  const download = async (kind: 'template' | 'export') => {
+  const download = async (kind: 'template' | 'export' | 'list') => {
     setDownloading(kind);
     try {
       if (kind === 'template') await downloadTemplate();
-      else await exportAll();
+      else if (kind === 'export') await exportAll();
+      else
+        await exportInterfaces({
+          keyword: filters.keyword || undefined,
+          integration_type: filters.integration_type || undefined,
+          system: filters.system || undefined,
+          cycle: filters.cycle || undefined,
+          status: filters.status || undefined,
+        });
     } catch (err) {
       setNotice({ kind: 'error', text: errorMessage(err) });
     } finally {
@@ -151,7 +159,16 @@ export function InterfaceListPage() {
             onClick={() => download('export')}
             disabled={downloading !== null}
           >
-            {downloading === 'export' ? '내보내는 중…' : 'Excel 내보내기'}
+            {downloading === 'export' ? '내보내는 중…' : '전체 백업(양식)'}
+          </button>
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={() => download('list')}
+            disabled={downloading !== null}
+            title="현재 검색·필터 조건의 목록을 Excel로 다운로드"
+          >
+            {downloading === 'list' ? '다운로드 중…' : 'Excel 다운로드'}
           </button>
           <button
             type="button"

@@ -5,6 +5,13 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added — Excel list downloads
+- `GET /api/interfaces/export` and `GET /api/systems/export`: single-sheet xlsx of the current
+  list (same filters/sort as the list endpoints, all pages). System export never includes
+  passwords.
+- `Excel 다운로드` buttons on 인터페이스 목록 (current search/filter) and 시스템 관리 (current
+  구분/search). The previous full two-sheet export remains as `전체 백업(양식)`.
+
 ### Added — Phase 2 (Dashboard)
 - `GET /api/dashboard/summary` (total interfaces/systems, active count, Real Time ratio,
   change_log rows in the last 7 days), `/by-system` (source/target counts per system, busiest
