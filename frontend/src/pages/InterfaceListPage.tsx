@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 
 import { errorMessage } from '../api/client';
 import { deleteInterface, listInterfaces } from '../api/interfaces';
@@ -31,7 +32,11 @@ const EMPTY_FILTERS: Filters = {
 };
 
 export function InterfaceListPage() {
-  const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
+  const [searchParams] = useSearchParams();
+  const [filters, setFilters] = useState<Filters>(() => ({
+    ...EMPTY_FILTERS,
+    system: searchParams.get('system') ?? '',
+  }));
   const [page, setPage] = useState(1);
   const [editing, setEditing] = useState<Interface | null>(null);
   const [formOpen, setFormOpen] = useState(false);
@@ -227,6 +232,7 @@ export function InterfaceListPage() {
                 <th className="px-4 py-2">연동방식</th>
                 <th className="px-4 py-2">소스시스템</th>
                 <th className="px-4 py-2">타켓시스템</th>
+                <th className="px-4 py-2">경유</th>
                 <th className="px-4 py-2">연동주기</th>
                 <th className="px-4 py-2">상태</th>
                 <th className="px-4 py-2" />
@@ -235,14 +241,14 @@ export function InterfaceListPage() {
             <tbody className="divide-y divide-slate-100">
               {query.loading && !data && (
                 <tr>
-                  <td colSpan={8} className="px-4 py-8 text-center text-slate-400">
+                  <td colSpan={9} className="px-4 py-8 text-center text-slate-400">
                     불러오는 중…
                   </td>
                 </tr>
               )}
               {data && data.items.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="px-4 py-8 text-center text-slate-400">
+                  <td colSpan={9} className="px-4 py-8 text-center text-slate-400">
                     조건에 맞는 인터페이스가 없습니다.
                   </td>
                 </tr>
@@ -266,6 +272,9 @@ export function InterfaceListPage() {
                       name={i.target_system?.system_name}
                       code={i.target_system?.system_code}
                     />
+                  </td>
+                  <td className="px-4 py-2 font-mono text-xs text-slate-500">
+                    {i.via_system?.system_code ?? '-'}
                   </td>
                   <td className="px-4 py-2">{i.cycle}</td>
                   <td className="px-4 py-2">

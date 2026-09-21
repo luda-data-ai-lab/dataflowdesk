@@ -22,6 +22,7 @@ interface FormState {
   process: string;
   source_system_id: string;
   target_system_id: string;
+  via_system_id: string;
   cycle: string;
   description: string;
   status: string;
@@ -34,6 +35,7 @@ const EMPTY: FormState = {
   process: '',
   source_system_id: '',
   target_system_id: '',
+  via_system_id: '',
   cycle: INTERFACE_CYCLES[0],
   description: '',
   status: INTERFACE_STATUSES[0],
@@ -48,6 +50,7 @@ function toForm(iface: Interface | null): FormState {
     process: iface.process ?? '',
     source_system_id: String(iface.source_system_id),
     target_system_id: String(iface.target_system_id),
+    via_system_id: iface.via_system_id === null ? '' : String(iface.via_system_id),
     cycle: iface.cycle,
     description: iface.description ?? '',
     status: iface.status,
@@ -63,6 +66,7 @@ function toInput(form: FormState): InterfaceInput {
     process: nullable(form.process),
     source_system_id: Number(form.source_system_id),
     target_system_id: Number(form.target_system_id),
+    via_system_id: form.via_system_id === '' ? null : Number(form.via_system_id),
     cycle: form.cycle,
     description: nullable(form.description),
     status: form.status,
@@ -214,6 +218,20 @@ function InterfaceForm({
           onChange={set('target_system_id')}
         >
           <option value="">선택…</option>
+          {systemOptions}
+        </select>
+      </div>
+      <div className="col-span-2">
+        <label className="label" htmlFor="if-via">
+          경유시스템 (EAI/IFSYS)
+        </label>
+        <select
+          id="if-via"
+          className="input"
+          value={form.via_system_id}
+          onChange={set('via_system_id')}
+        >
+          <option value="">직접 연동 (경유 없음)</option>
           {systemOptions}
         </select>
       </div>

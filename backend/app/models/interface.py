@@ -23,6 +23,7 @@ class Interface(Base):
     process: Mapped[str | None] = mapped_column(Text)
     source_system_id: Mapped[int | None] = mapped_column(ForeignKey("systems.id"), index=True)
     target_system_id: Mapped[int | None] = mapped_column(ForeignKey("systems.id"), index=True)
+    via_system_id: Mapped[int | None] = mapped_column(ForeignKey("systems.id"), index=True)
     cycle: Mapped[str] = mapped_column(String(20), nullable=False, index=True)
     description: Mapped[str | None] = mapped_column(Text)
     status: Mapped[str] = mapped_column(String(20), nullable=False, server_default="Active")
@@ -38,4 +39,7 @@ class Interface(Base):
     )
     target_system: Mapped[System | None] = relationship(
         System, foreign_keys=[target_system_id], back_populates="target_interfaces", lazy="joined"
+    )
+    via_system: Mapped[System | None] = relationship(
+        System, foreign_keys=[via_system_id], back_populates="via_interfaces", lazy="joined"
     )

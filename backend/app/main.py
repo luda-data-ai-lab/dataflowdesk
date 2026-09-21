@@ -6,12 +6,12 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
-from app.routers import interfaces, systems, upload
+from app.routers import branding, interfaces, systems, topology, upload
 
 settings = get_settings()
 
 app = FastAPI(
-    title="I/F Manager API",
+    title="DataFlowDesk API",
     version="0.1.0",
     description="System-to-system interface registry for MES/ERP environments.",
 )
@@ -27,6 +27,8 @@ app.add_middleware(
 app.include_router(systems.router)
 app.include_router(interfaces.router)
 app.include_router(upload.router)
+app.include_router(topology.router)
+app.include_router(branding.router)
 
 
 @app.get("/api/health", tags=["meta"])

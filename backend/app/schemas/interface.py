@@ -18,6 +18,9 @@ class InterfaceBase(BaseModel):
     process: str | None = None
     source_system_id: int
     target_system_id: int
+    via_system_id: int | None = Field(
+        default=None, description="Intermediate hub (e.g. IFSYS/EAI); null for direct links"
+    )
     cycle: str = Field(max_length=20, min_length=1)
     description: str | None = None
     status: str = Field(default=DEFAULT_INTERFACE_STATUS, max_length=20)
@@ -50,5 +53,6 @@ class InterfaceOut(InterfaceBase):
     id: int
     source_system: SystemRef | None = None
     target_system: SystemRef | None = None
+    via_system: SystemRef | None = None
     created_at: datetime
     updated_at: datetime

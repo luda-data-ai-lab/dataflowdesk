@@ -6,6 +6,7 @@ export interface InterfaceQuery {
   source?: string;
   target?: string;
   system?: string;
+  via?: string;
   cycle?: string;
   status?: string;
   keyword?: string;

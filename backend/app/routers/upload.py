@@ -112,6 +112,13 @@ async def upload_interfaces(
                 )
             )
             continue
+        via_code = rec.get("via_system_code")
+        via = systems.get(via_code) if via_code else None
+        if via_code and via is None:
+            errors.append(
+                RowError(row=row, field="경유시스템", reason=f"unknown system_code '{via_code}'")
+            )
+            continue
         db.add(
             Interface(
                 interface_id=iid,
@@ -120,6 +127,7 @@ async def upload_interfaces(
                 process=rec.get("process"),
                 source_system_id=src,
                 target_system_id=tgt,
+                via_system_id=via,
                 cycle=rec["cycle"],
                 description=rec.get("description"),
                 status=DEFAULT_INTERFACE_STATUS,
@@ -216,6 +224,7 @@ async def export_all(
             i.process,
             i.source_system.system_code if i.source_system else None,
             i.target_system.system_code if i.target_system else None,
+            i.via_system.system_code if i.via_system else None,
             i.cycle,
             i.description,
         ]

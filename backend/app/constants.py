@@ -14,6 +14,7 @@ INTERFACE_COLUMNS: dict[str, str] = {
     "인터페이스 Process": "process",
     "소스시스템": "source_system_code",
     "타켓시스템": "target_system_code",
+    "경유시스템": "via_system_code",
     "연동주기": "cycle",
     "인터페이스설명": "description",
 }
@@ -25,6 +26,9 @@ INTERFACE_REQUIRED: tuple[str, ...] = (
     "타켓시스템",
     "연동주기",
 )
+
+# headers that may be absent from an uploaded sheet (treated as empty)
+OPTIONAL_COLUMNS: frozenset[str] = frozenset({"경유시스템"})
 
 SYSTEM_COLUMNS: dict[str, str] = {
     "번호": "row_no",
@@ -43,7 +47,9 @@ SYSTEM_REQUIRED: tuple[str, ...] = ("구분", "Type", "시스템명", "시스템
 
 # --- Enum-like values ---------------------------------------------------------------
 SYSTEM_CATEGORIES: tuple[str, ...] = ("운영", "개발", "스테이징")
-SYSTEM_TYPES: tuple[str, ...] = ("ERP", "DB", "REST", "FTP", "MQ")
+SYSTEM_TYPES: tuple[str, ...] = ("ERP", "DB", "REST", "FTP", "MQ", "EAI")
+# system_code of the central integration hub shown in the topology diagram
+HUB_SYSTEM_CODE = "IFSYS"
 INTERFACE_CYCLES: tuple[str, ...] = ("Real Time", "Batch")
 INTERFACE_STATUSES: tuple[str, ...] = ("Active", "Inactive", "Deprecated")
 DEFAULT_INTERFACE_STATUS = "Active"

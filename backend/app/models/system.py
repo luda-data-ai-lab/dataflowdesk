@@ -39,3 +39,6 @@ class System(Base):
     target_interfaces: Mapped[list["Interface"]] = relationship(  # noqa: F821
         "Interface", foreign_keys="Interface.target_system_id", back_populates="target_system"
     )
+    via_interfaces: Mapped[list["Interface"]] = relationship(  # noqa: F821
+        "Interface", foreign_keys="Interface.via_system_id", back_populates="via_system"
+    )

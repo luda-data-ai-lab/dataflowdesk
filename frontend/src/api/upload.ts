@@ -8,11 +8,11 @@ async function downloadXlsx(url: string, fallbackName: string): Promise<void> {
 }
 
 export function downloadTemplate(): Promise<void> {
-  return downloadXlsx('/api/upload/template', 'if_manager_template.xlsx');
+  return downloadXlsx('/api/upload/template', 'dataflowdesk_template.xlsx');
 }
 
 export function exportAll(): Promise<void> {
-  return downloadXlsx('/api/upload/export', 'if_manager_export.xlsx');
+  return downloadXlsx('/api/upload/export', 'dataflowdesk_export.xlsx');
 }
 
 export async function uploadSheet(

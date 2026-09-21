@@ -21,7 +21,11 @@ async def _interface_counts(db: AsyncSession, system_ids: list[int]) -> dict[int
     if not system_ids:
         return {}
     counts: dict[int, int] = {sid: 0 for sid in system_ids}
-    for column in (Interface.source_system_id, Interface.target_system_id):
+    for column in (
+        Interface.source_system_id,
+        Interface.target_system_id,
+        Interface.via_system_id,
+    ):
         stmt = (
             select(column, func.count(Interface.id)).where(column.in_(system_ids)).group_by(column)
         )
