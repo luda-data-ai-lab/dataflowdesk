@@ -15,10 +15,10 @@ const DIRECT_COLOR = '#94a3b8';
 
 const WIDTH = 1000;
 const BOX_W = 170;
-const BOX_H = 44;
-const ROW = 60;
+const BOX_H = 42;
+const ROW = 54;
 const PAD_TOP = 70;
-const PAD_BOTTOM = 40;
+const PAD_BOTTOM = 70;
 const LEFT_X = 30;
 const RIGHT_X = WIDTH - BOX_W - 30;
 const MID_X = WIDTH / 2 - BOX_W / 2;
@@ -253,21 +253,30 @@ export function LayeredDiagram({
         </line>
       ))}
       {/* direct: source → target, routed below/above the EAI box as a straight dashed line */}
-      {directSegs.map(({ f, y1, y2, active }) => (
-        <line
-          key={`d-${f.source.id}-${f.target.id}`}
-          x1={LEFT_X + BOX_W}
-          y1={y1 + BOX_H / 2}
-          x2={RIGHT_X}
-          y2={y2 + BOX_H / 2}
-          stroke={active ? '#334155' : DIRECT_COLOR}
-          strokeWidth={active ? 2 : 1.2}
-          strokeDasharray="6 4"
-          strokeOpacity={opacity(active)}
-        >
-          <title>{`직접 연동 · ${f.count}건`}</title>
-        </line>
-      ))}
+      {directSegs.map(({ f, y1, y2, active }) => {
+        // Route around the EAI container (below it) instead of crossing the method boxes.
+        const below = PAD_TOP + rows * ROW + 20;
+        const sx = LEFT_X + BOX_W;
+        const sy = y1 + BOX_H / 2;
+        const tx = RIGHT_X;
+        const ty = y2 + BOX_H / 2;
+        const d = methods.length
+          ? `M ${sx} ${sy} C ${MID_X - 40} ${below}, ${MID_X + BOX_W + 40} ${below}, ${tx} ${ty}`
+          : `M ${sx} ${sy} L ${tx} ${ty}`;
+        return (
+          <path
+            key={`d-${f.source.id}-${f.target.id}`}
+            d={d}
+            fill="none"
+            stroke={active ? '#334155' : DIRECT_COLOR}
+            strokeWidth={active ? 2 : 1.2}
+            strokeDasharray="6 4"
+            strokeOpacity={opacity(active)}
+          >
+            <title>{`직접 연동 · ${f.count}건`}</title>
+          </path>
+        );
+      })}
 
       {/* method boxes */}
       {methods.map((m) => {
