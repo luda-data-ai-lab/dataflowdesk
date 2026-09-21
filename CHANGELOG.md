@@ -5,6 +5,16 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added — Phase 2 (Dashboard)
+- `GET /api/dashboard/summary` (total interfaces/systems, active count, Real Time ratio,
+  change_log rows in the last 7 days), `/by-system` (source/target counts per system, busiest
+  first, isolated systems included with 0), `/by-type` (연동방식) and `/by-cycle` (연동주기).
+- Frontend `대시보드` page (Recharts): four stat cards, stacked horizontal bar per system,
+  연동방식 donut, 연동주기 pie, and the layered IFSYS 구성도 embedded read-only. Cards, bars and
+  slices drill into the pre-filtered interface list; `새로고침` re-fetches everything.
+- `/` now lands on `/dashboard`; `/interfaces` also accepts `integration_type`, `cycle` and
+  `status` query params.
+
 ### Added — IFSYS topology, branding settings
 - Product renamed to **DataFlowDesk** (UI title, API title, README, export file names).
 - `interfaces.via_system_id` — optional intermediate (EAI) system; Excel column `경유시스템`

@@ -46,6 +46,12 @@ Interfaces may optionally route through an intermediate system (`via_system_id`,
 target`, direct interfaces (no via system) as `source → target`. Sites without an EAI simply
 leave `경유시스템` empty.
 
+## Dashboard
+
+`/dashboard` (the landing page) shows stat cards and Recharts charts fed by
+`GET /api/dashboard/{summary,by-system,by-type,by-cycle}`, plus the 구성도 embedded. Bars, slices
+and cards link to the pre-filtered interface list (`/interfaces?system=…&integration_type=…&cycle=…`).
+
 ## Customer branding
 
 `설정` (`/settings`) lets each customer upload a company logo (PNG/JPEG/GIF/WebP/SVG, ≤1 MB)

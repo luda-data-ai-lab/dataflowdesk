@@ -31,3 +31,18 @@ export const STATUS_COLORS: Record<string, string> = {
   Inactive: 'bg-slate-200 text-slate-700',
   Deprecated: 'bg-red-100 text-red-800',
 };
+
+// Dashboard chart palette (Recharts pie/donut slices, in order)
+export const CHART_COLORS = [
+  '#2563eb',
+  '#16a34a',
+  '#f97316',
+  '#9333ea',
+  '#e11d48',
+  '#0891b2',
+  '#ca8a04',
+  '#64748b',
+];
+// Bar colours for "interfaces by system"
+export const BAR_SOURCE_COLOR = '#2563eb';
+export const BAR_TARGET_COLOR = '#93c5fd';

@@ -10,9 +10,9 @@ interface NavItem {
   disabled?: boolean;
 }
 
-// Dashboard / 이력 / 사용자 are placeholders until Phase 2 & 3.
+// 이력 / 사용자 are placeholders until Phase 3.
 const NAV_ITEMS: NavItem[] = [
-  { to: '/dashboard', label: '대시보드', icon: 'DB', disabled: true },
+  { to: '/dashboard', label: '대시보드', icon: 'DB' },
   { to: '/interfaces', label: '인터페이스 목록', icon: 'IF' },
   { to: '/systems', label: '시스템 관리', icon: 'SY' },
   { to: '/topology', label: '구성도', icon: 'TP' },
@@ -67,7 +67,7 @@ export function Sidebar() {
           ),
         )}
       </nav>
-      <div className="px-5 py-3 text-[11px] text-white/40">Phase 1 · Foundation</div>
+      <div className="px-5 py-3 text-[11px] text-white/40">Phase 2 · Dashboard</div>
     </aside>
   );
 }
