@@ -36,6 +36,9 @@ export function InterfaceListPage() {
   const [filters, setFilters] = useState<Filters>(() => ({
     ...EMPTY_FILTERS,
     system: searchParams.get('system') ?? '',
+    integration_type: searchParams.get('integration_type') ?? '',
+    cycle: searchParams.get('cycle') ?? '',
+    status: searchParams.get('status') ?? '',
   }));
   const [page, setPage] = useState(1);
   const [editing, setEditing] = useState<Interface | null>(null);

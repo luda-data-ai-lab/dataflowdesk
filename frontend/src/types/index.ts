@@ -150,3 +150,26 @@ export interface BrandingInput {
   company_name: string | null;
   tagline: string | null;
 }
+
+export interface DashboardSummary {
+  total_interfaces: number;
+  total_systems: number;
+  active_interfaces: number;
+  realtime_ratio: number;
+  recent_changes: number;
+}
+
+export interface SystemCount {
+  system_id: number;
+  system_code: string;
+  system_name: string;
+  type: string;
+  source_count: number;
+  target_count: number;
+  total: number;
+}
+
+export interface LabelCount {
+  label: string;
+  count: number;
+}

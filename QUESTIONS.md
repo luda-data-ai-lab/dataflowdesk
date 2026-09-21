@@ -55,3 +55,17 @@ Requirement: customers must be able to add their logo easily. Decision: single-r
 table with the logo bytes stored in the DB (works for SQLite/PostgreSQL/MSSQL, no shared volume
 needed), ≤1 MB, type detected from file signature. One branding per deployment (one customer per
 installation); multi-tenant branding is out of scope until a tenant model exists.
+
+## Phase 2
+
+### Q10. Dashboard topology panel — layered SVG instead of D3 force graph
+SPEC §2.4 asks for a D3 force-directed graph on the dashboard. Phase 1 already ships the
+approved system-level layered 구성도 (source → EAI 연동방식 → target), so the dashboard embeds
+that component with the unfiltered `/api/topology` data instead of adding D3 and a second,
+differently-shaped diagram. `GET /api/dashboard/topology` is therefore not added; `/api/topology`
+is the single topology endpoint. Tell us if a force layout is still wanted.
+
+### Q11. "최근 7일 변경" card
+Counts `change_log` rows, but nothing writes to `change_log` until Phase 3 audit logging, so the
+card shows 0 for now (with a hint saying so). Alternative would be counting interfaces by
+`updated_at` in the last 7 days — say so if preferred.

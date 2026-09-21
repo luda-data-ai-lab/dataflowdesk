@@ -51,6 +51,8 @@ SYSTEM_TYPES: tuple[str, ...] = ("ERP", "DB", "REST", "FTP", "MQ", "EAI")
 # system_code of the central integration hub shown in the topology diagram
 HUB_SYSTEM_CODE = "IFSYS"
 INTERFACE_CYCLES: tuple[str, ...] = ("Real Time", "Batch")
+# cycle value counted as "real-time" for the dashboard ratio card
+REALTIME_CYCLE = "Real Time"
 INTERFACE_STATUSES: tuple[str, ...] = ("Active", "Inactive", "Deprecated")
 DEFAULT_INTERFACE_STATUS = "Active"
 
