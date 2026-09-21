@@ -37,6 +37,19 @@ export function TopologyPage() {
   );
   const hasDirect = flows.some((f) => f.method === null);
 
+  /** Registered systems that have no interface yet (not drawn in the diagram). */
+  const unconnected = useMemo(() => {
+    if (!data) return [];
+    const linked = new Set<number>();
+    flows.forEach((f) => {
+      linked.add(f.source.id);
+      linked.add(f.target.id);
+    });
+    return data.nodes
+      .filter((n) => !n.is_hub && !linked.has(n.id))
+      .sort((a, b) => a.system_code.localeCompare(b.system_code));
+  }, [data, flows]);
+
   /** Connected systems for the selected node: one row per partner, methods aggregated. */
   const partners = useMemo(() => {
     if (!selected) return [];
@@ -85,6 +98,14 @@ export function TopologyPage() {
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={query.reload}
+            disabled={query.loading}
+          >
+            새로고침
+          </button>
           <label className="flex items-center gap-1.5 whitespace-nowrap text-sm text-slate-600">
             <input
               type="checkbox"
@@ -140,6 +161,28 @@ export function TopologyPage() {
                 onSelect={setSelected}
                 onOpen={(n) => navigate(`/interfaces?system=${encodeURIComponent(n.system_code)}`)}
               />
+            </div>
+          )}
+          {unconnected.length > 0 && (
+            <div className="mx-3 mb-2 flex flex-wrap items-center gap-1.5 border-t border-slate-100 pt-2 text-xs text-slate-500">
+              <span className="mr-1">인터페이스 미등록 시스템 ({unconnected.length})</span>
+              {unconnected.map((n) => (
+                <button
+                  key={n.id}
+                  type="button"
+                  className={`rounded border px-2 py-0.5 hover:bg-slate-50 ${
+                    selected?.id === n.id
+                      ? 'border-blue-400 bg-blue-50 text-blue-700'
+                      : 'border-slate-200 text-slate-600'
+                  }`}
+                  onClick={() => setSelected(n)}
+                  onDoubleClick={() =>
+                    navigate(`/interfaces?system=${encodeURIComponent(n.system_code)}`)
+                  }
+                >
+                  {n.system_name} <span className="font-mono text-slate-400">{n.system_code}</span>
+                </button>
+              ))}
             </div>
           )}
           <div className="flex flex-wrap items-center gap-3 px-3 pb-2 text-xs text-slate-600">
