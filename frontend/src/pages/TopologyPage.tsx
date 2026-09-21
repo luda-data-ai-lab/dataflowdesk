@@ -13,11 +13,15 @@ import {
 import { useAsync } from '../hooks/useAsync';
 import type { TopologyNode } from '../types';
 
+const EDGE_PREVIEW = 5;
+
 export function TopologyPage() {
   const navigate = useNavigate();
   const [category, setCategory] = useState('');
   const [status, setStatus] = useState('');
   const [selected, setSelected] = useState<TopologyNode | null>(null);
+  const [showDirect, setShowDirect] = useState(true);
+  const [expandedEdge, setExpandedEdge] = useState<string | null>(null);
 
   const query = useAsync(
     () =>
@@ -58,7 +62,15 @@ export function TopologyPage() {
             상세를 확인하고, 더블클릭하면 해당 시스템의 인터페이스 목록으로 이동합니다.
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
+          <label className="flex items-center gap-1.5 whitespace-nowrap text-sm text-slate-600">
+            <input
+              type="checkbox"
+              checked={showDirect}
+              onChange={(e) => setShowDirect(e.target.checked)}
+            />
+            직접 연동 표시
+          </label>
           <select
             className="input w-32"
             value={category}
@@ -101,7 +113,11 @@ export function TopologyPage() {
             <HubDiagram
               topology={data}
               selectedId={selected?.id ?? null}
-              onSelect={setSelected}
+              showDirect={showDirect}
+              onSelect={(n) => {
+                setSelected(n);
+                setExpandedEdge(null);
+              }}
               onOpen={(n) => navigate(`/interfaces?system=${encodeURIComponent(n.system_code)}`)}
             />
           )}
@@ -119,7 +135,7 @@ export function TopologyPage() {
           </div>
         </div>
 
-        <aside className="card w-full shrink-0 p-4 text-sm lg:w-80">
+        <aside className="card w-full shrink-0 self-start p-4 text-sm lg:sticky lg:top-6 lg:max-h-[calc(100vh-3rem)] lg:w-80 lg:overflow-y-auto">
           {!selected && <p className="text-slate-400">노드를 선택하면 상세 정보가 표시됩니다.</p>}
           {selected && (
             <div className="space-y-3">
@@ -138,23 +154,50 @@ export function TopologyPage() {
                 연결 인터페이스 <b>{selected.interface_count}</b>건
               </div>
               <ul className="space-y-2">
-                {selectedEdges.map((e) => (
-                  <li key={`${e.from}-${e.to}`} className="rounded border border-slate-200 p-2">
-                    <div className="mb-1 font-mono text-xs font-semibold">
-                      {e.from} → {e.to}
-                    </div>
-                    <ul className="space-y-0.5 text-xs">
-                      {e.interfaces.map((i) => (
-                        <li key={i.id} className="flex justify-between gap-2">
-                          <span className="truncate">
-                            <span className="font-mono">{i.interface_id}</span> {i.interface_name}
-                          </span>
-                          <span className="shrink-0 text-slate-400">{i.cycle}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </li>
-                ))}
+                {selectedEdges.map((e) => {
+                  const edgeKey = `${e.from}-${e.to}`;
+                  const expanded = expandedEdge === edgeKey;
+                  const shown = expanded ? e.interfaces : e.interfaces.slice(0, EDGE_PREVIEW);
+                  const hidden = e.interfaces.length - shown.length;
+                  return (
+                    <li key={edgeKey} className="rounded border border-slate-200 p-2">
+                      <div className="mb-1 flex justify-between font-mono text-xs font-semibold">
+                        <span>
+                          {e.from} → {e.to}
+                        </span>
+                        <span className="text-slate-400">{e.interfaces.length}건</span>
+                      </div>
+                      <ul className="space-y-0.5 text-xs">
+                        {shown.map((i) => (
+                          <li key={i.id} className="flex justify-between gap-2">
+                            <span className="truncate">
+                              <span className="font-mono">{i.interface_id}</span> {i.interface_name}
+                            </span>
+                            <span className="shrink-0 text-slate-400">{i.cycle}</span>
+                          </li>
+                        ))}
+                      </ul>
+                      {hidden > 0 && (
+                        <button
+                          type="button"
+                          className="mt-1 text-xs text-brand-600 hover:underline"
+                          onClick={() => setExpandedEdge(edgeKey)}
+                        >
+                          외 {hidden}건 더 보기
+                        </button>
+                      )}
+                      {expanded && e.interfaces.length > EDGE_PREVIEW && (
+                        <button
+                          type="button"
+                          className="mt-1 text-xs text-slate-500 hover:underline"
+                          onClick={() => setExpandedEdge(null)}
+                        >
+                          접기
+                        </button>
+                      )}
+                    </li>
+                  );
+                })}
               </ul>
               <button
                 type="button"
