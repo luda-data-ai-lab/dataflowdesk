@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useState, type React
 
 import { login as apiLogin, me } from '../api/auth';
 import { SESSION_EXPIRED_EVENT } from '../api/client';
-import { clearTokens, getAccessToken, storeTokens } from '../auth/tokens';
+import { clearTokens, getAccessToken, getRefreshToken, storeTokens } from '../auth/tokens';
 import type { User } from '../types';
 
 interface AuthContextValue {
@@ -24,7 +24,7 @@ const AuthContext = createContext<AuthContextValue>({
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [ready, setReady] = useState(() => getAccessToken() === null);
+  const [ready, setReady] = useState(() => getAccessToken() === null && getRefreshToken() === null);
 
   useEffect(() => {
     if (ready) return;
