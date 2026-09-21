@@ -37,19 +37,40 @@ export function TopologyPage() {
   );
   const hasDirect = flows.some((f) => f.method === null);
 
-  /** Connected systems for the selected node, one row per (partner, method). */
+  /** Connected systems for the selected node: one row per partner, methods aggregated. */
   const partners = useMemo(() => {
     if (!selected) return [];
-    return flows
+    const acc = new Map<
+      number,
+      {
+        partner: TopologyNode;
+        outbound: boolean;
+        inbound: boolean;
+        methods: Map<string | null, number>;
+        count: number;
+      }
+    >();
+    flows
       .filter((f) => f.source.id === selected.id || f.target.id === selected.id)
-      .map((f) => ({
-        key: `${f.source.id}|${f.method ?? ''}|${f.target.id}`,
-        outbound: f.source.id === selected.id,
-        partner: f.source.id === selected.id ? f.target : f.source,
-        method: f.method,
-        count: f.count,
-      }))
-      .sort((a, b) => a.partner.system_code.localeCompare(b.partner.system_code));
+      .forEach((f) => {
+        const outbound = f.source.id === selected.id;
+        const partner = outbound ? f.target : f.source;
+        const row = acc.get(partner.id) ?? {
+          partner,
+          outbound: false,
+          inbound: false,
+          methods: new Map<string | null, number>(),
+          count: 0,
+        };
+        row.outbound = row.outbound || outbound;
+        row.inbound = row.inbound || !outbound;
+        row.methods.set(f.method, (row.methods.get(f.method) ?? 0) + f.count);
+        row.count += f.count;
+        acc.set(partner.id, row);
+      });
+    return Array.from(acc.values()).sort((a, b) =>
+      a.partner.system_code.localeCompare(b.partner.system_code),
+    );
   }, [flows, selected]);
 
   return (
@@ -155,22 +176,34 @@ export function TopologyPage() {
                 </div>
               </div>
               <div className="text-slate-600">
-                연결 시스템 <b>{new Set(partners.map((p) => p.partner.id)).size}</b>개 · 인터페이스{' '}
+                연결 시스템 <b>{partners.length}</b>개 · 인터페이스{' '}
                 <b>{selected.interface_count}</b>건
               </div>
               <ul className="divide-y divide-slate-100 rounded border border-slate-200">
                 {partners.map((p) => (
-                  <li key={p.key} className="flex items-center gap-2 px-2 py-1.5 text-xs">
-                    <span
-                      className="inline-block h-0.5 w-4 shrink-0"
-                      style={{ background: methodColor(p.method, methods) }}
-                    />
-                    <span className="text-slate-400">{p.outbound ? '→' : '←'}</span>
-                    <span className="truncate font-medium">{p.partner.system_name}</span>
-                    <span className="font-mono text-slate-400">{p.partner.system_code}</span>
-                    <span className="ml-auto shrink-0 text-slate-500">
-                      {p.method ?? '직접'} · {p.count}건
-                    </span>
+                  <li key={p.partner.id} className="px-2 py-1.5 text-xs">
+                    <div className="flex items-center gap-2">
+                      <span className="w-5 shrink-0 text-slate-400">
+                        {p.outbound && p.inbound ? '↔' : p.outbound ? '→' : '←'}
+                      </span>
+                      <span className="truncate font-medium">{p.partner.system_name}</span>
+                      <span className="font-mono text-slate-400">{p.partner.system_code}</span>
+                      <span className="ml-auto shrink-0 text-slate-500">{p.count}건</span>
+                    </div>
+                    <div className="mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5 pl-7">
+                      {Array.from(p.methods.entries()).map(([m, c]) => (
+                        <span
+                          key={m ?? 'direct'}
+                          className="flex items-center gap-1 text-slate-500"
+                        >
+                          <span
+                            className="inline-block h-0.5 w-3"
+                            style={{ background: methodColor(m, methods) }}
+                          />
+                          {m ?? '직접'} {c}
+                        </span>
+                      ))}
+                    </div>
                   </li>
                 ))}
               </ul>
