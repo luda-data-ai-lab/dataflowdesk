@@ -118,7 +118,8 @@ export function DashboardPage() {
         <StatCard
           label="최근 7일 변경"
           value={s ? s.recent_changes.toLocaleString() : '–'}
-          hint="변경 이력은 Phase 3에서 기록됩니다"
+          hint="시스템·인터페이스 등록/수정/삭제 건수"
+          onClick={() => navigate('/history')}
         />
       </div>
 

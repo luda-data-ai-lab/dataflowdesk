@@ -14,6 +14,7 @@ from app.database import get_db
 from app.models import Branding
 from app.models.branding import BRANDING_ROW_ID
 from app.schemas.branding import BrandingOut, BrandingUpdate
+from app.services import auth
 
 router = APIRouter(prefix="/api/settings/branding", tags=["settings"])
 
@@ -69,7 +70,7 @@ async def get_branding(db: AsyncSession = Depends(get_db)) -> BrandingOut:
     return _to_out(await _get_or_create(db))
 
 
-@router.put("", response_model=BrandingOut)
+@router.put("", response_model=BrandingOut, dependencies=[Depends(auth.get_current_user)])
 async def update_branding(
     payload: BrandingUpdate, db: AsyncSession = Depends(get_db)
 ) -> BrandingOut:
@@ -82,7 +83,7 @@ async def update_branding(
     return _to_out(row)
 
 
-@router.post("/logo", response_model=BrandingOut)
+@router.post("/logo", response_model=BrandingOut, dependencies=[Depends(auth.get_current_user)])
 async def upload_logo(
     file: UploadFile = File(...), db: AsyncSession = Depends(get_db)
 ) -> BrandingOut:
@@ -110,7 +111,7 @@ async def upload_logo(
     return _to_out(row)
 
 
-@router.delete("/logo", response_model=BrandingOut)
+@router.delete("/logo", response_model=BrandingOut, dependencies=[Depends(auth.get_current_user)])
 async def delete_logo(db: AsyncSession = Depends(get_db)) -> BrandingOut:
     """Remove the company logo (falls back to the default text header)."""
     row = await _get_or_create(db)

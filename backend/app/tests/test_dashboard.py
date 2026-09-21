@@ -48,7 +48,7 @@ async def test_summary_counts(client: AsyncClient) -> None:
     assert body["total_systems"] == 4
     assert body["active_interfaces"] == 2
     assert body["realtime_ratio"] == 66.7
-    assert body["recent_changes"] == 0
+    assert body["recent_changes"] == 7  # one CREATE change_log row per system / interface
 
 
 async def test_by_system(client: AsyncClient) -> None:

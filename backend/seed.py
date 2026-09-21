@@ -1,4 +1,4 @@
-"""Insert the SPEC §7 sample systems and interfaces (plus the IFSYS hub, see QUESTIONS.md).
+"""Insert the initial admin account and the SPEC §7 sample systems / interfaces (plus IFSYS).
 
 Usage (from `backend/`): `python seed.py`. Idempotent — existing codes/ids are skipped.
 """
@@ -10,9 +10,10 @@ from typing import Any
 
 from sqlalchemy import select
 
+from app.config import get_settings
 from app.database import SessionLocal
-from app.models import Interface, System
-from app.services import crypto
+from app.models import Interface, System, User
+from app.services import auth, crypto
 
 # system_code for sample row 5 is blank in SPEC §7 — see QUESTIONS.md Q3
 SAMPLE_SYSTEMS: list[dict[str, Any]] = [
@@ -34,7 +35,25 @@ SAMPLE_INTERFACES: list[dict[str, Any]] = [
 
 async def seed() -> None:
     """Insert missing sample rows and print a summary."""
+    settings = get_settings()
     async with SessionLocal() as db:
+        admin_exists = (
+            await db.execute(select(User.id).where(User.username == settings.admin_username))
+        ).scalar_one_or_none()
+        added_admin = 0
+        if admin_exists is None:
+            db.add(
+                User(
+                    username=settings.admin_username,
+                    password_hash=auth.hash_password(settings.admin_password),
+                    display_name="관리자",
+                    role="admin",
+                    is_active=True,
+                )
+            )
+            added_admin = 1
+            await db.commit()
+
         existing_codes = set((await db.execute(select(System.system_code))).scalars().all())
         added_systems = 0
         for row in SAMPLE_SYSTEMS:
@@ -66,7 +85,7 @@ async def seed() -> None:
             )
             added_ifs += 1
         await db.commit()
-    print(f"seed: +{added_systems} systems, +{added_ifs} interfaces")
+    print(f"seed: +{added_admin} admin, +{added_systems} systems, +{added_ifs} interfaces")
 
 
 if __name__ == "__main__":

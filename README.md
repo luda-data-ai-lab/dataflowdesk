@@ -2,13 +2,13 @@
 
 Web application for managing system-to-system interfaces (MES/ERP integration landscape).
 Replaces Excel-based tracking with a database, searchable UI, an IFSYS-centred topology
-diagram and a dashboard.
+diagram, a dashboard, automatic change history and JWT-authenticated user accounts.
 See [SPEC.md](SPEC.md) for the product specification and [DEVIN.md](DEVIN.md) for the
 development plan.
 
 ## Tech stack
 
-- Backend: FastAPI (Python 3.11+), SQLAlchemy 2.0 async, Alembic, openpyxl
+- Backend: FastAPI (Python 3.11+), SQLAlchemy 2.0 async, Alembic, openpyxl, python-jose (JWT), passlib/bcrypt
 - Frontend: React 18 + TypeScript + Vite + Tailwind CSS
 - Databases: SQLite (default), PostgreSQL 15, MS SQL Server — selected with `DB_TYPE`
 
@@ -22,7 +22,7 @@ cd backend
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 alembic upgrade head          # creates ./data/ifmanager.db
-python seed.py                # optional: sample systems + interfaces
+python seed.py                # initial admin account (+ sample systems / interfaces)
 uvicorn app.main:app --reload --port 8000
 
 # frontend (second terminal)
@@ -32,6 +32,11 @@ npm run dev                   # http://localhost:5173
 ```
 
 API docs: http://localhost:8000/docs
+
+Log in at http://localhost:5173/login with the seeded admin account — `admin` / `admin1234`
+by default (`ADMIN_USERNAME` / `ADMIN_PASSWORD` in `.env`, applied only when the user does not
+exist yet). Change the password after first login via 사용자 관리, and set a long random
+`JWT_SECRET` before exposing the server.
 
 ## Switching database
 
@@ -58,6 +63,29 @@ and cards link to the pre-filtered interface list (`/interfaces?system=…&integ
 and set a company name / tagline. The logo is stored in the database (`branding` table) and
 shown at the top of the sidebar; no rebuild or restart is needed. API:
 `GET/PUT /api/settings/branding`, `POST/DELETE /api/settings/branding/logo`.
+
+## Authentication and roles
+
+Every `/api/*` endpoint except `/api/health`, `/api/auth/*` and `GET /api/settings/branding`
+requires `Authorization: Bearer <access token>`. `POST /api/auth/login` returns an access token
+(`JWT_ACCESS_TOKEN_MINUTES`, default 30) and a refresh token (`JWT_REFRESH_TOKEN_DAYS`, default 7);
+the frontend stores both in `localStorage`, retries once through `POST /api/auth/refresh` on 401
+and redirects to `/login` when that fails.
+
+- `admin` — everything, plus 사용자 관리 (`/api/users`: list / create / edit / role change /
+  deactivate / activate). An admin cannot demote or deactivate their own account.
+- `user` — all interface / system / topology / dashboard / 변경 이력 features.
+
+Passwords are stored as bcrypt hashes and never returned by the API.
+
+## Change history (변경 이력)
+
+Every CREATE / UPDATE / DELETE of a system or interface is written to `change_log` in the same
+transaction (SQLAlchemy flush listeners in `backend/app/services/audit.py`): one row per changed
+field on update, one JSON snapshot row on create / delete, tagged with the acting user. System
+passwords are recorded as `***`. `GET /api/changelog` filters by table, action, user, record and
+date range; `GET /api/changelog/export` downloads the filtered log as xlsx. The dashboard card
+"최근 7일 변경" counts these rows.
 
 ## Development
 

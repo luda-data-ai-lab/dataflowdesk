@@ -13,6 +13,10 @@ from sqlalchemy.pool import StaticPool
 from app import models  # noqa: F401
 from app.database import Base, get_db
 from app.main import app
+from app.models import User
+from app.services import auth
+
+ADMIN = {"username": "admin", "password": "admin1234"}
 
 SYSTEM_PAYLOAD: dict[str, Any] = {
     "category": "운영",
@@ -29,8 +33,8 @@ SYSTEM_PAYLOAD: dict[str, Any] = {
 
 
 @pytest.fixture
-async def client() -> AsyncIterator[AsyncClient]:
-    """Fresh in-memory DB per test, wired into the FastAPI dependency."""
+async def anon_client() -> AsyncIterator[AsyncClient]:
+    """Fresh in-memory DB (with a seeded admin) per test; no Authorization header."""
     engine = create_async_engine(
         "sqlite+aiosqlite://",
         connect_args={"check_same_thread": False},
@@ -39,6 +43,17 @@ async def client() -> AsyncIterator[AsyncClient]:
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     session_factory = async_sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
+    async with session_factory() as session:
+        session.add(
+            User(
+                username=ADMIN["username"],
+                password_hash=auth.hash_password(ADMIN["password"]),
+                display_name="관리자",
+                role="admin",
+                is_active=True,
+            )
+        )
+        await session.commit()
 
     async def override_get_db() -> AsyncIterator[AsyncSession]:
         async with session_factory() as session:
@@ -52,10 +67,27 @@ async def client() -> AsyncIterator[AsyncClient]:
     await engine.dispose()
 
 
-async def create_system(client: AsyncClient, **overrides: Any) -> dict[str, Any]:
+async def login(client: AsyncClient, username: str, password: str) -> dict[str, str]:
+    """POST /api/auth/login and return the token pair."""
+    resp = await client.post("/api/auth/login", json={"username": username, "password": password})
+    assert resp.status_code == 200, resp.text
+    return resp.json()
+
+
+@pytest.fixture
+async def client(anon_client: AsyncClient) -> AsyncClient:
+    """`anon_client` logged in as the seeded admin."""
+    tokens = await login(anon_client, ADMIN["username"], ADMIN["password"])
+    anon_client.headers["Authorization"] = f"Bearer {tokens['access_token']}"
+    return anon_client
+
+
+async def create_system(
+    client: AsyncClient, headers: dict[str, str] | None = None, **overrides: Any
+) -> dict[str, Any]:
     """POST a system and return the response JSON."""
     payload = {**SYSTEM_PAYLOAD, **overrides}
-    resp = await client.post("/api/systems", json=payload)
+    resp = await client.post("/api/systems", json=payload, headers=headers)
     assert resp.status_code == 201, resp.text
     return resp.json()
 

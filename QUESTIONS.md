@@ -69,3 +69,25 @@ is the single topology endpoint. Tell us if a force layout is still wanted.
 Counts `change_log` rows, but nothing writes to `change_log` until Phase 3 audit logging, so the
 card shows 0 for now (with a hint saying so). Alternative would be counting interfaces by
 `updated_at` in the last 7 days — say so if preferred.
+→ Resolved in Phase 3: audit rows are written, the card shows the real count.
+
+## Phase 3
+
+### Q12. Audit rows via session flush listeners, not per-mapper events
+DEVIN.md names `after_insert/after_update/after_delete`. We use Session `after_flush` /
+`after_flush_postexec` instead: attribute history is intact there, new PKs are assigned, and the
+rows are added to the same session so they commit (or roll back) with the change itself. Same
+semantics (one row per changed field on update, snapshot on create/delete).
+
+### Q13. What is audited
+Only `systems` and `interfaces` (SPEC §2.5). Uploads already have `upload_history`; user and
+branding changes are not logged. System passwords appear in the log only as `***`.
+
+### Q14. Public endpoints
+`GET /api/settings/branding` stays unauthenticated so the login page can show the customer logo
+and name; branding writes require a token. `/api/health` is public for probes.
+
+### Q15. Session lifetime
+Access token 30 min, refresh token 7 days (env-configurable). Tokens live in `localStorage`;
+there is no server-side revocation list, so deactivating a user takes effect on the next request
+(every request re-checks `is_active`).

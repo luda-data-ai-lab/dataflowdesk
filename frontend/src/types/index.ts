@@ -173,3 +173,47 @@ export interface LabelCount {
   label: string;
   count: number;
 }
+
+export type Role = 'admin' | 'user';
+
+export interface User {
+  id: number;
+  username: string;
+  display_name: string | null;
+  role: Role;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface UserCreate {
+  username: string;
+  password: string;
+  display_name: string | null;
+  role: Role;
+}
+
+export interface UserUpdate {
+  display_name: string | null;
+  role: Role;
+  password: string | null;
+}
+
+export interface TokenPair {
+  access_token: string;
+  refresh_token: string;
+  token_type: string;
+}
+
+export interface ChangeLog {
+  id: number;
+  table_name: string;
+  record_id: number;
+  record_label: string | null;
+  action: string;
+  field_name: string | null;
+  old_value: string | null;
+  new_value: string | null;
+  changed_at: string;
+  user_id: number | null;
+  username: string | null;
+}
