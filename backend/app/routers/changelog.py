@@ -8,6 +8,7 @@ from datetime import date, datetime, time, timedelta
 from fastapi import APIRouter, Depends, Query, Response
 from sqlalchemy import Select, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import aliased
 
 from app.constants import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE
 from app.database import get_db
@@ -45,8 +46,23 @@ def _filtered(
     date_to: date | None,
 ) -> Select[Row]:
     """Newest-first change log joined with the acting user and the current record label."""
+    deleted = aliased(ChangeLog)
+    delete_snapshot = (
+        select(deleted.old_value)
+        .where(
+            deleted.table_name == ChangeLog.table_name,
+            deleted.record_id == ChangeLog.record_id,
+            deleted.action == "DELETE",
+        )
+        .order_by(deleted.id.desc())
+        .limit(1)
+        .correlate(ChangeLog)
+        .scalar_subquery()
+    )
     stmt = (
-        select(ChangeLog, User.username, System.system_code, Interface.interface_id)
+        select(
+            ChangeLog, User.username, System.system_code, Interface.interface_id, delete_snapshot
+        )
         .outerjoin(User, User.id == ChangeLog.user_id)
         .outerjoin(System, (ChangeLog.table_name == "systems") & (System.id == ChangeLog.record_id))
         .outerjoin(
@@ -72,13 +88,18 @@ def _filtered(
     return stmt
 
 
-def _label(log: ChangeLog, system_code: str | None, interface_id: str | None) -> str | None:
-    """Current key of the record; falls back to the CREATE / DELETE snapshot when it is gone."""
+def _label(
+    log: ChangeLog,
+    system_code: str | None,
+    interface_id: str | None,
+    delete_snapshot: str | None,
+) -> str | None:
+    """Current key of the record; for deleted records, the key from the last DELETE snapshot."""
     current = system_code if log.table_name == "systems" else interface_id
     if current:
         return current
-    snapshot = log.old_value if log.action == "DELETE" else log.new_value
-    if log.field_name is None and snapshot:
+    snapshot = delete_snapshot or (log.new_value if log.field_name is None else None)
+    if snapshot:
         try:
             value = json.loads(snapshot).get(LABEL_KEYS.get(log.table_name, ""))
         except ValueError:
@@ -88,12 +109,12 @@ def _label(log: ChangeLog, system_code: str | None, interface_id: str | None) ->
 
 
 def _to_out(row: Row) -> ChangeLogOut:
-    log, username, system_code, interface_id = row
+    log, username, system_code, interface_id, delete_snapshot = row
     return ChangeLogOut(
         id=log.id,
         table_name=log.table_name,
         record_id=log.record_id,
-        record_label=_label(log, system_code, interface_id),
+        record_label=_label(log, system_code, interface_id, delete_snapshot),
         action=log.action,
         field_name=log.field_name,
         old_value=log.old_value,

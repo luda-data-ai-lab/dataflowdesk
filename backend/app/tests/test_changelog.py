@@ -48,11 +48,31 @@ async def test_crud_produces_change_log_rows(client: AsyncClient) -> None:
     }
 
     # delete: snapshot kept so the label survives after the record is gone
+    if_body = {
+        k: iface[k]
+        for k in (
+            "interface_id",
+            "interface_name",
+            "integration_type",
+            "process",
+            "source_system_id",
+            "target_system_id",
+            "cycle",
+            "description",
+            "status",
+        )
+    }
+    if_body["status"] = "Inactive"
+    assert (await client.put(f"/api/interfaces/{iface['id']}", json=if_body)).status_code == 200
     assert (await client.delete(f"/api/interfaces/{iface['id']}")).status_code == 204
     deleted = (await client.get("/api/changelog", params={"action": "DELETE"})).json()["items"]
     assert len(deleted) == 1
     assert deleted[0]["record_label"] == "001_SAP_CRM"
     assert deleted[0]["new_value"] is None
+    # earlier rows of the deleted record keep the label too
+    history = (await client.get("/api/changelog", params={"table": "interfaces"})).json()["items"]
+    assert [h["action"] for h in history] == ["DELETE", "UPDATE", "CREATE"]
+    assert {h["record_label"] for h in history} == {"001_SAP_CRM"}
 
     # no-op update writes nothing
     before = (await client.get("/api/changelog")).json()["total"]
