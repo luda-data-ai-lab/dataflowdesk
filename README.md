@@ -4,7 +4,7 @@ Web application for managing system-to-system interfaces (MES/ERP integration la
 Replaces Excel-based tracking with a database, searchable UI, an IFSYS-centred topology
 diagram, a dashboard, automatic change history and JWT-authenticated user accounts.
 See [SPEC.md](SPEC.md) for the product specification and [DEVIN.md](DEVIN.md) for the
-development plan. End-user manual (Korean): [docs/USER_GUIDE.md](docs/USER_GUIDE.md).
+development plan. End-user manual (Korean): [docs/USER_GUIDE.md](docs/USER_GUIDE.md); EC2 deployment: [docs/DEPLOY_EC2.md](docs/DEPLOY_EC2.md).
 
 ## Tech stack
 

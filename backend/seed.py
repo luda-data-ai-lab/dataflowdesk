@@ -1,11 +1,13 @@
 """Insert the initial admin account and the SPEC §7 sample systems / interfaces (plus IFSYS).
 
-Usage (from `backend/`): `python seed.py`. Idempotent — existing codes/ids are skipped.
+Usage (from `backend/`): `python seed.py` (admin + samples) or `python seed.py --admin-only`.
+Idempotent — existing codes/ids are skipped.
 """
 
 from __future__ import annotations
 
 import asyncio
+import sys
 from typing import Any
 
 from sqlalchemy import select
@@ -33,8 +35,8 @@ SAMPLE_INTERFACES: list[dict[str, Any]] = [
 ]  # fmt: skip
 
 
-async def seed() -> None:
-    """Insert missing sample rows and print a summary."""
+async def seed(admin_only: bool = False) -> None:
+    """Insert the admin account (and, unless `admin_only`, the sample rows) and print a summary."""
     settings = get_settings()
     async with SessionLocal() as db:
         admin_exists = (
@@ -53,6 +55,9 @@ async def seed() -> None:
             )
             added_admin = 1
             await db.commit()
+        if admin_only:
+            print(f"seed: +{added_admin} admin")
+            return
 
         existing_codes = set((await db.execute(select(System.system_code))).scalars().all())
         added_systems = 0
@@ -89,4 +94,4 @@ async def seed() -> None:
 
 
 if __name__ == "__main__":
-    asyncio.run(seed())
+    asyncio.run(seed(admin_only="--admin-only" in sys.argv[1:]))
