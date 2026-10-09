@@ -1,10 +1,10 @@
 # EC2 배포 가이드 (Ubuntu, nginx + systemd)
 
-구성: nginx가 `dfd.ludaresearch.org`에서 빌드된 프론트(정적 파일)를 서비스하고 `/api`를 127.0.0.1:5174의 uvicorn(FastAPI)으로 프록시합니다.
+구성: nginx가 `df.ludaresearch.org`에서 빌드된 프론트(정적 파일)를 서비스하고 `/api`를 127.0.0.1:5174의 uvicorn(FastAPI)으로 프록시합니다.
 DB는 SQLite(`data/ifmanager.db`)로 시작하고, 필요하면 `.env`만 바꿔 PostgreSQL로 전환합니다.
 
 > 서버에 이미 3000/3001/5000/5001/5002 포트가 사용 중이므로 백엔드는 **5174**을 사용합니다.
-> 포트/도메인을 바꾸려면 아래 명령의 `5174`, `dfd.ludaresearch.org`를 일괄 치환하세요.
+> 포트/도메인을 바꾸려면 아래 명령의 `5174`, `df.ludaresearch.org`를 일괄 치환하세요.
 
 ## 0. 사전 확인
 
@@ -13,7 +13,7 @@ sudo ss -tlnp | grep 5174        # 비어 있어야 함
 node -v && python3 --version     # Node 18+, Python 3.11+
 ```
 
-DNS: Route53(또는 사용 중인 DNS)에 `dfd.ludaresearch.org` A 레코드 → EC2 공인 IP 추가.
+DNS: Route53(또는 사용 중인 DNS)에 `df.ludaresearch.org` A 레코드 → EC2 공인 IP 추가.
 
 ## 1. 소스 받기
 
@@ -42,7 +42,7 @@ JWT_SECRET=<위에서 생성한 랜덤 문자열>
 ADMIN_USERNAME=admin
 ADMIN_PASSWORD=<초기 관리자 비밀번호>
 BACKEND_PORT=5174
-CORS_ORIGINS=https://dfd.ludaresearch.org
+CORS_ORIGINS=https://df.ludaresearch.org
 ```
 
 (Fernet 키 생성에 `cryptography`가 없다고 나오면 3단계 venv 설치 후 `.venv/bin/python -c ...`로 실행)
@@ -101,7 +101,7 @@ API는 같은 도메인의 `/api`로 호출되므로 `VITE_API_BASE_URL`은 비�
 sudo tee /etc/nginx/sites-available/dataflowdesk >/dev/null <<'NGINX'
 server {
     listen 80;
-    server_name dfd.ludaresearch.org;
+    server_name df.ludaresearch.org;
 
     root /home/ubuntu/dataflowdesk/frontend/dist;
     index index.html;
@@ -128,10 +128,10 @@ server {
 NGINX
 sudo ln -sf /etc/nginx/sites-available/dataflowdesk /etc/nginx/sites-enabled/dataflowdesk
 sudo nginx -t && sudo systemctl reload nginx
-sudo certbot --nginx -d dfd.ludaresearch.org
+sudo certbot --nginx -d df.ludaresearch.org
 ```
 
-브라우저에서 https://dfd.ludaresearch.org 접속 → admin 로그인 → **사용자 관리**에서 비밀번호 변경.
+브라우저에서 https://df.ludaresearch.org 접속 → admin 로그인 → **사용자 관리**에서 비밀번호 변경.
 
 ## 6. 업데이트 배포
 
