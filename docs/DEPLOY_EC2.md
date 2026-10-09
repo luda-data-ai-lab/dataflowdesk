@@ -18,7 +18,7 @@ DNS: Route53(또는 사용 중인 DNS)에 `dfd.ludaresearch.org` A 레코드 →
 ## 1. 소스 받기
 
 ```bash
-cd ~/app
+cd ~
 git clone https://github.com/luda-data-ai-lab/dataflowdesk.git
 cd dataflowdesk
 ```
@@ -50,7 +50,7 @@ CORS_ORIGINS=https://dfd.ludaresearch.org
 ## 3. 백엔드
 
 ```bash
-cd ~/app/dataflowdesk/backend
+cd ~/dataflowdesk/backend
 python3 -m venv .venv
 .venv/bin/pip install --upgrade pip
 .venv/bin/pip install -r requirements.txt
@@ -70,9 +70,9 @@ After=network.target
 
 [Service]
 User=ubuntu
-WorkingDirectory=/home/ubuntu/app/dataflowdesk/backend
-EnvironmentFile=/home/ubuntu/app/dataflowdesk/.env
-ExecStart=/home/ubuntu/app/dataflowdesk/backend/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 5174 --workers 1
+WorkingDirectory=/home/ubuntu/dataflowdesk/backend
+EnvironmentFile=/home/ubuntu/dataflowdesk/.env
+ExecStart=/home/ubuntu/dataflowdesk/backend/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 5174 --workers 1
 Restart=always
 RestartSec=3
 
@@ -88,7 +88,7 @@ curl -s http://127.0.0.1:5174/api/health      # {"status":"ok",...}
 ## 4. 프론트엔드 빌드
 
 ```bash
-cd ~/app/dataflowdesk/frontend
+cd ~/dataflowdesk/frontend
 npm ci
 npm run build                       # → frontend/dist
 ```
@@ -103,7 +103,7 @@ server {
     listen 80;
     server_name dfd.ludaresearch.org;
 
-    root /home/ubuntu/app/dataflowdesk/frontend/dist;
+    root /home/ubuntu/dataflowdesk/frontend/dist;
     index index.html;
     client_max_body_size 20m;        # Excel 업로드 / 로고
 
@@ -136,7 +136,7 @@ sudo certbot --nginx -d dfd.ludaresearch.org
 ## 6. 업데이트 배포
 
 ```bash
-cd ~/app/dataflowdesk
+cd ~/dataflowdesk
 git pull
 cd backend && .venv/bin/pip install -r requirements.txt && .venv/bin/alembic upgrade head && cd ..
 cd frontend && npm ci && npm run build && cd ..
@@ -146,7 +146,7 @@ sudo systemctl restart dataflowdesk
 ## 7. 백업
 
 ```bash
-cp ~/app/dataflowdesk/data/ifmanager.db ~/backup/ifmanager_$(date +%F).db
+cp ~/dataflowdesk/data/ifmanager.db ~/backup/ifmanager_$(date +%F).db
 ```
 
 또는 앱의 **인터페이스 목록 → 전체 백업(양식)** 으로 Excel 백업.
