@@ -1,15 +1,15 @@
 # EC2 배포 가이드 (Ubuntu, nginx + systemd)
 
-구성: nginx가 `dfd.ludaresearch.org`에서 빌드된 프론트(정적 파일)를 서비스하고 `/api`를 127.0.0.1:8010의 uvicorn(FastAPI)으로 프록시합니다.
+구성: nginx가 `dfd.ludaresearch.org`에서 빌드된 프론트(정적 파일)를 서비스하고 `/api`를 127.0.0.1:5174의 uvicorn(FastAPI)으로 프록시합니다.
 DB는 SQLite(`data/ifmanager.db`)로 시작하고, 필요하면 `.env`만 바꿔 PostgreSQL로 전환합니다.
 
-> 서버에 이미 3000/3001/5000/5001/5002 포트가 사용 중이므로 백엔드는 **8010**을 사용합니다.
-> 포트/도메인을 바꾸려면 아래 명령의 `8010`, `dfd.ludaresearch.org`를 일괄 치환하세요.
+> 서버에 이미 3000/3001/5000/5001/5002 포트가 사용 중이므로 백엔드는 **5174**을 사용합니다.
+> 포트/도메인을 바꾸려면 아래 명령의 `5174`, `dfd.ludaresearch.org`를 일괄 치환하세요.
 
 ## 0. 사전 확인
 
 ```bash
-sudo ss -tlnp | grep 8010        # 비어 있어야 함
+sudo ss -tlnp | grep 5174        # 비어 있어야 함
 node -v && python3 --version     # Node 18+, Python 3.11+
 ```
 
@@ -41,7 +41,7 @@ SYSTEM_PASSWORD_KEY=<위에서 생성한 Fernet 키>
 JWT_SECRET=<위에서 생성한 랜덤 문자열>
 ADMIN_USERNAME=admin
 ADMIN_PASSWORD=<초기 관리자 비밀번호>
-BACKEND_PORT=8010
+BACKEND_PORT=5174
 CORS_ORIGINS=https://dfd.ludaresearch.org
 ```
 
@@ -72,7 +72,7 @@ After=network.target
 User=ubuntu
 WorkingDirectory=/home/ubuntu/app/dataflowdesk/backend
 EnvironmentFile=/home/ubuntu/app/dataflowdesk/.env
-ExecStart=/home/ubuntu/app/dataflowdesk/backend/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8010 --workers 1
+ExecStart=/home/ubuntu/app/dataflowdesk/backend/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 5174 --workers 1
 Restart=always
 RestartSec=3
 
@@ -82,7 +82,7 @@ UNIT
 sudo systemctl daemon-reload
 sudo systemctl enable --now dataflowdesk
 sudo systemctl status dataflowdesk --no-pager
-curl -s http://127.0.0.1:8010/api/health      # {"status":"ok",...}
+curl -s http://127.0.0.1:5174/api/health      # {"status":"ok",...}
 ```
 
 ## 4. 프론트엔드 빌드
@@ -108,7 +108,7 @@ server {
     client_max_body_size 20m;        # Excel 업로드 / 로고
 
     location /api/ {
-        proxy_pass http://127.0.0.1:8010;
+        proxy_pass http://127.0.0.1:5174;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
